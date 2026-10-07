@@ -118,7 +118,7 @@ textarea.ta{width:100%;height:230px;border:1.5px solid var(--border);border-radi
 </head>
 <body>
 <div class="ph">
-  <div><h1>Service 報工系統</h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.7</div></div>
+  <div><h1>Service 報工系統</h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.8</div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -204,7 +204,7 @@ textarea.ta{width:100%;height:230px;border:1.5px solid var(--border);border-radi
       <div class="row" style="margin-top:8px"><button class="btn btn-p btn-s" onclick="makeCfgLink()">產生設定連結</button><button class="btn btn-o btn-s" onclick="copyCfg()">複製</button>
         <span class="hint" id="cfgInfo"></span></div>
       <textarea class="ta" id="cfgOut" style="height:70px;margin-top:6px" readonly placeholder="按「產生設定連結」後出現，用 LINE 傳給同仁"></textarea>
-      <p>連結內含主檔清單和 Forms 網址（放在 # 後面，不會傳到網站伺服器）。同仁用手機點開就完成設定；新進員工、主檔有變動時，重新產生再傳一次即可。<br>
+      <p>可以用 LINE、Teams、簡訊等任何方式傳送。連結內含主檔清單和 Forms 網址（放在 # 後面，不會傳到網站伺服器）。同仁用手機點開就完成設定；新進員工、主檔有變動時，重新產生再傳一次即可。<br>
       報工電腦也可以用：把連結貼到下方「套用設定碼」，主檔就會更新。</p>
       <div class="row" style="margin-top:6px"><input class="inp" id="cfgIn" style="flex:1;min-width:220px" placeholder="套用設定碼：貼上設定連結或 SR1: 開頭的設定碼"><button class="btn btn-b btn-s" onclick="applyCfgText(document.getElementById('cfgIn').value)">套用</button></div>
       <div class="row" style="margin-top:6px"><span class="hint">這台裝置的使用者：</span><b id="meName">未設定</b><button class="btn btn-o btn-s" onclick="askMe()">變更</button></div>
@@ -774,7 +774,7 @@ async function makeCfgLink(){
   localStorage.setItem(HOST_KEY,host);
   if(M().formUrl!==fu){DB.master={...M(),formUrl:fu,updatedAt:Date.now()};persist();autoSync()}
   const code=await packText({app:'service-report',cfg:1,master:M()});
-  const link=host.replace(/#.*$/,'')+'#cfg='+code;
+  const base=host.replace(/#.*$/,''); const link=base+(base.includes('?')?'&':'?')+'openExternalBrowser=1#cfg='+code;
   document.getElementById('cfgOut').value=link;
   document.getElementById('cfgInfo').textContent=`長度 ${link.length} 字元 · 人員 ${M().staff.length}、客戶 ${M().customers.length}、機種 ${M().models.length}`;
 }
@@ -798,6 +798,7 @@ function cfgFail(msg,fromWizard){if(fromWizard){showWizard('member',msg)}else al
 // ── 第一次使用引導 ──
 let wizAfterMe=false;
 const isPhone=()=>!('showOpenFilePicker' in window);
+const inApp=()=>/\bLine\/|FBAN|FBAV|Instagram|MicroMessenger|WhatsApp|Teams\/|KAKAOTALK|; wv\)/i.test(navigator.userAgent);
 function closeWizard(){document.getElementById('wiz').classList.remove('on')}
 function showWizard(step,err){
   const T=document.getElementById('wzTitle'),B=document.getElementById('wzBody');
@@ -808,7 +809,8 @@ function showWizard(step,err){
       <button class="bigbtn" onclick="showWizard('member')"><span class="ic">📱</span><span>同仁的手機／報工電腦<small>用主管傳來的「設定連結」完成設定</small></span></button>
       <button class="bigbtn" onclick="showWizard('admin')"><span class="ic">🖥</span><span>管理者電腦（可以開 SharePoint）<small>連到共用檔，看全部資料和月報</small></span></button>`}
   else if(step==='member'){T.textContent='設定這台裝置';
-    B.innerHTML=`<ol><li>打開 LINE，<b>點主管傳來的設定連結</b>，就會自動完成。</li>
+    B.innerHTML=`${inApp()?`<div class="err" style="margin:0 0 12px">⚠ 你現在是在通訊軟體（LINE、Teams 等）裡面開的。請點右上或右下的「⋯」→「<b>以預設瀏覽器開啟</b>」，換到 Safari／Chrome 再設定，不然之後會找不到資料。</div>`:''}
+      <ol><li><b>點管理者傳來的設定連結</b>（LINE、Teams、簡訊都可以），就會自動完成。</li>
       <li>點了沒反應？<b>長按連結 →「複製」</b>，貼到下面，按「套用」。</li></ol>
       <textarea class="ta" id="wzCfg" style="height:80px" placeholder="把設定連結貼在這裡"></textarea>
       <div class="row" style="margin-top:8px"><button class="btn btn-p" onclick="applyCfgText(document.getElementById('wzCfg').value,true)">套用</button>
@@ -822,7 +824,7 @@ function showWizard(step,err){
       <div class="hint" style="margin-top:12px">完成後到 ⚙ →「收件匣資料夾」選「報工_inbox」，報工電腦和手機送來的資料才會併進來。<br>
       第一次建立整個系統（還沒有共用檔）：⚙ → 同步共用檔 →「＋ 建立新共用檔」，再到「清單」輸入人員、客戶。</div>`}
   else if(step==='done'){T.textContent='✔ 設定完成';
-    B.innerHTML=`<div class="ok">你好，${esc(myName()||'同仁')}！之後打開就能直接報工。</div>
+    B.innerHTML=`${inApp()?`<div class="err" style="margin:0 0 12px">⚠ 目前在通訊軟體裡面。請點「⋯」→「以預設瀏覽器開啟」，在 Safari／Chrome 再點一次設定連結，之後才能加到主畫面。</div>`:''}<div class="ok">你好，${esc(myName()||'同仁')}！之後打開就能直接報工。</div>
       <h4 style="margin-top:14px">報工三步驟</h4><ol><li>選服務項目或工作類型、時間、客戶……</li><li>按「＋ 新增」</li><li>跳出表單後按「<b>提交</b>」（這一步才算送出）</li></ol>
       <h4 style="margin-top:10px">放到手機桌面（建議）</h4><ol><li>iPhone（Safari）：下方「分享」→「加入主畫面」</li><li>Android（Chrome）：右上「⋮」→「加到主畫面」</li></ol>
       <button class="btn btn-p" style="margin-top:8px" onclick="closeWizard();showTab(isPhone()?'fs':'ws')">開始使用</button>`}
@@ -830,6 +832,7 @@ function showWizard(step,err){
     B.innerHTML=`<h4>常見狀況</h4><ol>
       <li><b>按新增後沒跳出表單</b>：畫面下方會出現紫色按鈕「開啟上傳表單」，點它再按「提交」。</li>
       <li><b>忘了按提交</b>：右上角「📤 上傳」會顯示未送出筆數，點一下補送；重複送不會變成兩筆。</li>
+      <li><b>每次打開都要重新設定</b>：之前是在通訊軟體裡開的。點設定連結後選「以預設瀏覽器開啟」，再加到主畫面。</li>
       <li><b>名字選錯</b>：⚙ → 同步共用檔 →「這台裝置的使用者」→ 變更。</li>
       <li><b>人員、客戶清單不對或缺人</b>：請管理者重傳新的設定連結，點開即更新。</li>
       <li><b>畫面怪怪的、怎麼弄都不對</b>：用下面的「重新設定」，報工紀錄會保留。</li></ol>
