@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service 報工系統</title>
+<style>
+:root{--navy:#0D1B2A;--navy2:#1B2D44;--blue:#1565C0;--blue2:#1976D2;
+  --red:#B71C1C;--red2:#E53935;--orange:#E65100;--green:#1B5E20;--green2:#2E7D32;
+  --grey1:#212121;--grey2:#546E7A;--grey3:#B0BEC5;--grey4:#ECEFF1;
+  --bg:#F0F2F5;--card:#FFFFFF;--border:#D0D7DE}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft JhengHei','PingFang TC',system-ui,sans-serif;background:var(--bg);color:var(--grey1);font-size:13px;line-height:1.5}
+button{font-family:inherit}
+.ph{background:linear-gradient(135deg,#0D1B2A,#1B2D44);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;border-bottom:3px solid #E53935;position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.ph h1{font-size:16px;font-weight:700}.ph .sub{font-size:10px;color:#90CAF9;margin-top:2px}
+.ph .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.sync-btn{background:#E53935;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.sync-btn:hover{background:#C62828}
+.sync-st{font-size:10.5px;color:#90CAF9;max-width:260px;text-align:right}
+.tabs{display:flex;gap:1px;padding:8px 12px 0;background:var(--navy2);overflow-x:auto}
+.tab{padding:7px 15px;border-radius:7px 7px 0 0;font-size:12px;font-weight:600;color:#90CAF9;background:rgba(255,255,255,.07);white-space:nowrap;border:none;cursor:pointer}
+.tab.active{background:#fff;color:var(--grey1)}
+.tab.adm{margin-left:auto;color:#FFAB91;background:rgba(229,57,53,.15)}
+.panel{display:none}.panel.active{display:block}
+.main{padding:12px;max-width:1500px;margin:0 auto}
+.card{background:var(--card);border-radius:11px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-hd{padding:9px 15px;display:flex;align-items:center;gap:8px;background:var(--grey4);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.card-hd h2{font-size:13px;font-weight:700;flex:1}
+.card-bd{padding:12px 15px}
+/* entry form */
+.frm{display:grid;grid-template-columns:110px 1fr;gap:9px 12px;align-items:center}
+.frm>label{font-size:12px;font-weight:700;color:var(--grey2);text-align:right}
+.frm .req::after{content:' *';color:var(--red2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--border);background:#fff;border-radius:18px;padding:5px 13px;font-size:12.5px;cursor:pointer;color:var(--grey1);font-weight:600;line-height:1.2}
+.chip:hover{border-color:var(--blue2)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.chip small{font-weight:400;opacity:.75;margin-left:3px}
+.inp{border:1.5px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;font-family:inherit;height:32px;outline:none;background:#fff}
+.inp:focus{border-color:var(--blue2);background:#f0f8ff}
+.inp.t{width:78px;text-align:center}
+.inp.err{border-color:var(--red2);background:#FFEBEE}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{font-size:11px;color:var(--grey2)}
+.calc{background:#EFF6FF;color:var(--blue);font-weight:700;border-radius:6px;padding:5px 12px;font-size:13px}
+.msg{font-size:12px;font-weight:600}
+.msg.bad{color:var(--red)}.msg.ok{color:var(--green2)}.msg.warn{color:var(--orange)}
+.btn{border:none;border-radius:7px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-p{background:var(--green2);color:#fff}.btn-p:hover{background:var(--green)}
+.btn-b{background:var(--blue);color:#fff}.btn-b:hover{background:var(--blue2)}
+.btn-o{background:#fff;border:1px solid var(--border);color:var(--grey2);font-weight:600}
+.btn-r{background:var(--red2);color:#fff}
+.btn-s{padding:5px 11px;font-size:11.5px}
+/* list */
+.tbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.tw{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{background:var(--navy2);color:#fff;padding:6px 8px;text-align:left;font-weight:600;white-space:nowrap}
+table.dt td{padding:5px 8px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+table.dt tr:hover td{background:#f7f9fc}
+table.dt td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.dt th.n{text-align:right}
+table.dt tr.tot td{font-weight:700;background:var(--grey4)}
+.tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;color:#fff;margin-right:4px}
+.bad-cell{color:var(--red);font-weight:700}
+.ib{background:none;border:none;color:var(--grey3);font-size:14px;padding:1px 5px;border-radius:4px;cursor:pointer}
+.ib:hover{background:#E3F2FD;color:var(--blue)}.ib.del:hover{background:#FFEBEE;color:var(--red2)}
+.empty{text-align:center;color:var(--grey3);padding:24px}
+/* KPI */
+.kpig{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:12px}
+.kc{background:var(--grey4);border-radius:9px;padding:10px 12px;text-align:center}
+.kc .kv{font-size:24px;font-weight:800}
+.kc .kl{font-size:11.5px;color:var(--grey2)}
+.cb{color:var(--blue)}.cg{color:var(--green2)}.co{color:var(--orange)}.cr{color:var(--red)}
+/* board */
+.board{width:100%;border-collapse:separate;border-spacing:0 6px}
+.board th{color:var(--grey2);font-size:13px;text-align:left;padding:2px 10px}
+.board td{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:10px;vertical-align:top}
+.board td:first-child{border-left:1px solid var(--border);border-radius:9px 0 0 9px;font-weight:800;font-size:16px;white-space:nowrap;width:150px}
+.board td:last-child{border-right:1px solid var(--border);border-radius:0 9px 9px 0;text-align:center;font-size:20px;font-weight:800;color:var(--blue);width:110px}
+.bitem{display:block;margin:2px 0;font-size:15px;font-weight:600}
+.bitem .tm{font-size:11.5px;color:var(--grey2);font-weight:400;margin-left:6px}
+.none{color:var(--grey3);font-size:14px}
+.board.big td,.board.big .bitem{font-size:20px}.board.big td:first-child{font-size:22px}
+/* modal */
+.mbg{position:fixed;inset:0;background:rgba(13,27,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:500;padding:30px 12px;overflow:auto}
+.mbg.on{display:flex}
+.modal{background:#fff;border-radius:12px;width:min(860px,100%);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.mhd{background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px 12px 0 0;display:flex;align-items:center}
+.mhd h3{font-size:14px;flex:1}
+.mtabs{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--border)}
+.mtab{border:none;background:none;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--grey2);cursor:pointer;border-bottom:2px solid transparent}
+.mtab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.mp{display:none;padding:16px 18px}.mp.on{display:block}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.mgrid label{font-size:12px;font-weight:700;color:var(--grey2);display:block;margin-bottom:4px}
+textarea.ta{width:100%;height:230px;border:1.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:12.5px;font-family:inherit;resize:vertical;line-height:1.55}
+.mft{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.box{background:#F5F8FF;border:1.5px solid var(--blue2);border-radius:9px;padding:12px 14px;margin-bottom:12px}
+.box.y{background:#FFF8E1;border-color:#F9A825}
+.box.r{background:#FFEBEE;border-color:var(--red2)}
+.box p{font-size:11.5px;color:var(--grey2);line-height:1.65;margin-top:6px}
+@media(max-width:700px){.frm{grid-template-columns:1fr;gap:5px 8px}.frm>label{text-align:left;margin-top:6px}
+  .ph{padding:8px 12px;gap:6px;flex-wrap:nowrap}.ph h1{font-size:15px}.ph .sub,.sync-st{display:none}.ph .right{margin-left:auto}
+  .sync-btn{padding:6px 10px}.main{padding:8px}.card-bd{padding:10px}.card-hd{padding:8px 10px}.card-hd h2{flex-basis:100%}
+  .frm .hint{display:none}.chip{padding:7px 13px;font-size:14px}.inp{font-size:16px}.inp.t{width:74px}
+  .tab{padding:7px 11px}.tab.adm{margin-left:0}.btn{padding:9px 16px}}
+</style>
+</head>
+<body>
+<div class="ph">
+  <div><h1>Service 報工系統</h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.6</div></div>
+  <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button></div>
+</div>
+<div class="tabs">
+  <button class="tab active" data-p="ws" onclick="showTab('ws')">🔧 廠內／其他</button>
+  <button class="tab" data-p="fs" onclick="showTab('fs')">🚐 廠外報工</button>
+  <button class="tab" data-p="board" onclick="showTab('board')">📺 今日看板</button>
+  <button class="tab" data-p="rpt" onclick="showTab('rpt')">📊 月報</button>
+  <button class="tab adm" onclick="openAdmin()">⚙ 主檔與同步</button>
+</div>
+
+<div class="main">
+  <div class="panel active" id="p-ws"></div>
+  <div class="panel" id="p-fs"></div>
+
+  <div class="panel" id="p-board">
+    <div class="card"><div class="card-hd"><h2>📺 今日看板 — 依實際報工顯示</h2>
+      <input type="date" class="inp" id="bDate" onchange="renderBoard()">
+      <button class="btn btn-o btn-s" onclick="bShift(-1)">◀ 前一天</button>
+      <button class="btn btn-o btn-s" onclick="bShift(1)">後一天 ▶</button>
+      <button class="btn btn-o btn-s" onclick="document.getElementById('bTbl').classList.toggle('big')">字放大</button>
+      <button class="btn btn-b btn-s" onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">⛶ 全螢幕</button>
+    </div><div class="card-bd"><table class="board" id="bTbl"></table>
+    <div class="hint" id="bHint" style="margin-top:6px"></div></div></div>
+  </div>
+
+  <div class="panel" id="p-rpt">
+    <div class="card"><div class="card-hd"><h2>📊 月報</h2>
+      <input type="month" class="inp" id="rMonth" onchange="renderReport()">
+      <button class="btn btn-b btn-s" onclick="exportCSV('month')">⬇ 匯出本月明細 CSV</button>
+      <button class="btn btn-o btn-s" onclick="exportCSV('all')">⬇ 匯出全部 CSV</button>
+    </div><div class="card-bd" id="rBody"></div></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="mbg" id="adm">
+ <div class="modal">
+  <div class="mhd"><h3>⚙ 主檔與同步</h3><button class="ib" style="color:#fff;font-size:18px" onclick="closeAdmin()">✕</button></div>
+  <div class="mtabs">
+    <button class="mtab on" data-m="list" onclick="mTab('list')">清單</button>
+    <button class="mtab" data-m="time" onclick="mTab('time')">時段</button>
+    <button class="mtab" data-m="sync" onclick="mTab('sync')">同步共用檔</button>
+    <button class="mtab" data-m="data" onclick="mTab('data')">資料備份</button>
+  </div>
+  <div class="mp on" id="m-list">
+    <div class="hint" style="margin-bottom:10px">每行一個項目，順序就是畫面上的順序。工作類型格式為「代碼 名稱」，WS（工單維修）和 FS（客戶現場服務）兩個代碼請保留。</div>
+    <div class="mgrid">
+      <div><label>人員</label><textarea class="ta" id="mStaff"></textarea></div>
+      <div><label>工作類型</label><textarea class="ta" id="mType"></textarea></div>
+      <div><label>站別（廠內）</label><textarea class="ta" id="mStation"></textarea></div>
+      <div><label>客戶（廠外）</label><textarea class="ta" id="mCust"></textarea></div>
+      <div><label>機種</label><textarea class="ta" id="mModel"></textarea></div>
+      <div><label>服務項目（客戶現場服務 FS）</label><textarea class="ta" id="mSvc"></textarea></div>
+    </div>
+  </div>
+  <div class="mp" id="m-time">
+    <div class="hint" style="margin-bottom:10px">點選時段按鈕會自動帶入這裡的時間；跨午休自動扣除。</div>
+    <table class="dt" style="max-width:420px"><tr><th>時段</th><th>開始</th><th>結束</th></tr>
+      <tr><td>全天</td><td><input class="inp t" id="tAllS"></td><td><input class="inp t" id="tAllE"></td></tr>
+      <tr><td>上午</td><td><input class="inp t" id="tAmS"></td><td><input class="inp t" id="tAmE"></td></tr>
+      <tr><td>下午</td><td><input class="inp t" id="tPmS"></td><td><input class="inp t" id="tPmE"></td></tr>
+      <tr><td>午休</td><td><input class="inp t" id="tLuS"></td><td><input class="inp t" id="tLuE"></td></tr>
+    </table>
+  </div>
+  <div class="mp" id="m-sync">
+    <div class="box">
+      <b>共用檔：</b><span id="syncFile">未設定</span>
+      <div class="row" style="margin-top:9px">
+        <button class="btn btn-b btn-s" onclick="pickShared(false)">📂 選擇既有共用檔</button>
+        <button class="btn btn-o btn-s" onclick="pickShared(true)">＋ 建立新共用檔</button>
+        <button class="btn btn-o btn-s" onclick="syncNow(true)">🔄 立即同步</button>
+        <button class="btn btn-o btn-s" onclick="forgetShared()">⚙ 取消設定</button>
+      </div>
+      <p>同步 = 讀取共用檔 → 和本機資料合併 → 寫回共用檔。每筆紀錄有自己的編號，大家的輸入會累加，刪除也會同步，不會被「復活」。<br>
+      第一台電腦按「建立新共用檔」，存到 SharePoint 同步資料夾，檔名 <b>報工_shared.json</b>；其他電腦按「選擇既有共用檔」選同一個檔。<br>
+      設定後，每次存檔和每 2 分鐘會自動同步（瀏覽器重開後第一次需要按一次「🔄 同步」授權）。只支援電腦版 Chrome / Edge。</p>
+    </div>
+    <div class="box" style="border-color:#2E7D32;background:#F1F8E9"><b>📱 手機／新裝置設定連結</b>（由有主檔的電腦產生）
+      <div class="mgrid" style="margin-top:8px">
+        <div><label>手機版網址（GitHub Pages）</label><input class="inp" id="hostUrl" style="width:100%" placeholder="https://帳號.github.io/service-report/"></div>
+        <div><label>Forms 預先填入網址（資料欄填 TEST）</label><input class="inp" id="cfgFormUrl" style="width:100%" placeholder="https://forms.cloud.microsoft/...&r…=TEST"></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn btn-p btn-s" onclick="makeCfgLink()">產生設定連結</button><button class="btn btn-o btn-s" onclick="copyCfg()">複製</button>
+        <span class="hint" id="cfgInfo"></span></div>
+      <textarea class="ta" id="cfgOut" style="height:70px;margin-top:6px" readonly placeholder="按「產生設定連結」後出現，用 LINE 傳給同仁"></textarea>
+      <p>連結內含主檔清單和 Forms 網址（放在 # 後面，不會傳到網站伺服器）。同仁用手機點開就完成設定；新進員工、主檔有變動時，重新產生再傳一次即可。<br>
+      報工電腦也可以用：把連結貼到下方「套用設定碼」，主檔就會更新。</p>
+      <div class="row" style="margin-top:6px"><input class="inp" id="cfgIn" style="flex:1;min-width:220px" placeholder="套用設定碼：貼上設定連結或 SR1: 開頭的設定碼"><button class="btn btn-b btn-s" onclick="applyCfgText(document.getElementById('cfgIn').value)">套用</button></div>
+      <div class="row" style="margin-top:6px"><span class="hint">這台裝置的使用者：</span><b id="meName">未設定</b><button class="btn btn-o btn-s" onclick="askMe()">變更</button></div>
+    </div>
+    <div class="box" style="border-color:#6A1B9A;background:#F8F2FC"><b>報工電腦（沒有公司帳號）：Forms 上傳模式</b>　<span id="formSt" class="hint"></span>
+      <div class="row" style="margin-top:8px"><input class="inp" id="formUrl" style="flex:1;min-width:260px" placeholder="Forms「取得預先填寫的 URL」產生的網址（資料欄填 TEST）">
+        <button class="btn btn-b btn-s" onclick="enableFormMode()">啟用（這台是報工電腦）</button><button class="btn btn-o btn-s" onclick="disableFormMode()">停用</button></div>
+      <div class="row" style="margin-top:6px"><button class="btn btn-o btn-s" onclick="resendDays(1)">重新上傳今天的全部紀錄</button><button class="btn btn-o btn-s" onclick="resendDays(7)">重新上傳最近 7 天</button>
+        <span class="hint">漏按「提交」時用；重複上傳不會造成重複資料</span></div>
+      <p>只有報工電腦要啟用。啟用後，每次存檔會自動開啟「報工上傳」表單，資料已預先填好，只要按「提交」。Power Automate 會把資料存進 SharePoint 的報工_inbox，你和 Addy 的電腦同步時自動併入。<br>
+      這台電腦收不到其他電腦的資料；主檔清單有修改時，請在 SharePoint 下載「報工_shared.json」，用「資料備份 → 合併匯入 JSON」更新。</p></div>
+    <div class="box"><b>收件匣資料夾（有帳號的電腦設定）：</b><span id="inboxName">未設定</span>
+      <div class="row" style="margin-top:8px"><button class="btn btn-b btn-s" onclick="pickInbox()">📂 選擇「報工_inbox」資料夾</button><button class="btn btn-o btn-s" onclick="forgetInbox()">取消設定</button></div>
+      <p>報工電腦上傳的資料會先放在 SharePoint 的「報工_inbox」資料夾。設定後，這台電腦每次同步會把收件匣的資料併進共用檔，然後清掉已處理的檔案。建議你和 Addy 的電腦都設定。</p></div>
+    <div class="box y"><b>OneDrive 衝突副本</b>
+      <p>兩台電腦幾乎同時同步時，OneDrive 可能另存一份「報工_shared-電腦名稱.json」。用「資料備份 → 合併匯入 JSON」把那個副本匯入，再按同步，然後刪掉副本即可，資料不會遺失。</p></div>
+  </div>
+  <div class="mp" id="m-data">
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-b btn-s" onclick="downloadJSON()">⬇ 下載備份 JSON</button>
+      <label class="btn btn-o btn-s" style="display:inline-block">⬆ 合併匯入 JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
+      <button class="btn btn-o btn-s" onclick="loadSample()">載入範例資料（測試用）</button>
+    </div>
+    <div class="box r"><b>清除本機資料</b>
+      <p>只清除這台電腦瀏覽器裡的資料，不影響共用檔；同步後會再從共用檔取回。用在測試結束或換電腦時。</p>
+      <button class="btn btn-r btn-s" style="margin-top:8px" onclick="clearLocal()">清除本機資料</button></div>
+    <div class="hint" id="dataInfo"></div>
+  </div>
+  <div class="mft"><button class="btn btn-o" onclick="closeAdmin()">取消</button><button class="btn btn-p" onclick="saveAdmin()">💾 儲存主檔</button></div>
+ </div>
+</div>
+
+<div class="mbg" id="meDlg"><div class="modal" style="width:min(460px,100%)">
+  <div class="mhd"><h3>👤 我是誰？</h3></div>
+  <div style="padding:16px 18px"><div class="hint" style="margin-bottom:10px">選一次就好，之後報工會自動帶入你的名字（仍可改選）。</div>
+  <div class="chips" id="meChips"></div></div>
+  <div class="mft"><button class="btn btn-o" onclick="setMe('')">不指定（共用電腦）</button></div></div></div>
+<script>
+// ═══ 預設主檔 ═══
+const DEFAULT_MASTER={
+  staff:[],
+  types:["WS 工單維修","FS 客戶現場服務","SYS 系統案支援","TEST 新機測試/廠驗","SUP 跨部門支援","5S 環境整理","TRN 教育訓練"],
+  stations:["拆解檢查","噴砂清洗","檢整組裝","噴漆塗層","性能測試"],
+  customers:[],
+  services:["保養","檢修","拆機","裝機"],
+  models:["R5","Mink","COBRA","Seco","Dolphin","Panda","Puma","Samos","Fossa","Huckepack","其他品牌"],
+  shifts:{"全天":["08:30","17:30"],"上午":["08:30","12:00"],"下午":["13:00","17:30"]},
+  lunch:["12:00","13:00"],
+  updatedAt:0
+};
+const TYPE_COLOR={WS:'#1565C0',FS:'#2E7D32',SYS:'#6A1B9A',TEST:'#00838F',SUP:'#E65100','5S':'#795548',TRN:'#AD1457'};
+const TRAVEL_OPTS=[0,0.5,1,1.5,2,2.5,3,4];
+const LS_KEY='svc_report_db';
+
+// ═══ 資料 ═══
+let DB=loadDB();
+function loadDB(){
+  try{const d=JSON.parse(localStorage.getItem(LS_KEY));if(d&&d.records&&d.master)return d}catch(e){}
+  return {app:'service-report',ver:1,records:[],master:JSON.parse(JSON.stringify(DEFAULT_MASTER))};
+}
+function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.models];if(!Array.isArray(m.services))m.services=[...DEFAULT_MASTER.services];return m}
+fixMaster(DB.master);
+function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(DB))}catch(e){alert('本機儲存失敗：'+e.message)}}
+const M=()=>DB.master;
+const live=()=>DB.records.filter(r=>!r.deleted);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const code=t=>(t||'').split(' ')[0];
+const pad=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const fmt1=n=>(Math.round(n*10)/10).toFixed(1);
+
+// 時間：830 → 08:30
+function normTime(v){
+  v=String(v||'').trim(); if(!v) return '';
+  let h,m;
+  if(v.includes(':')){[h,m]=v.split(':');h=+h;m=+(m||0)}
+  else{const d=v.replace(/\D/g,'');if(!d)return null;
+    if(d.length<=2){h=+d;m=0}else if(d.length===3){h=+d[0];m=+d.slice(1)}else{h=+d.slice(0,2);m=+d.slice(2,4)}}
+  if(isNaN(h)||isNaN(m)||h>23||m>59) return null;
+  return pad(h)+':'+pad(m);
+}
+const toMin=t=>{if(!t)return null;const[a,b]=t.split(':');return +a*60+ +b};
+function hoursOf(r){
+  const s=toMin(r.start),e=toMin(r.end); if(s==null||e==null) return 0;
+  const ls=toMin(M().lunch[0]),le=toMin(M().lunch[1]);
+  const lunch=Math.max(0,Math.min(e,le)-Math.max(s,ls));
+  return Math.round((e-s-lunch)/6)/10;
+}
+function checkRec(r){
+  if(!r.date) return '缺日期'; if(!r.staff) return '缺人員'; if(!r.type) return '缺工作類型';
+  if(!r.start||!r.end) return '缺時間';
+  const h=hoursOf(r); if(h<=0) return '結束要晚於開始';
+  if(code(r.type)==='WS'&&!r.station) return '工單維修要選站別';
+  if(code(r.type)==='FS'&&!r.svc) return '客戶現場服務要選服務項目';
+  if(code(r.type)==='FS'&&!r.cust) return '客戶現場服務要選客戶';
+  if(r.kind==='FS'&&+r.travel>=h) return '交通時數不能大於等於總工時';
+  return '';
+}
+function overlapWarn(r){
+  const s=toMin(r.start),e=toMin(r.end);
+  const o=live().find(x=>x.id!==r.id&&x.staff===r.staff&&x.date===r.date&&toMin(x.start)<e&&toMin(x.end)>s);
+  return o?`注意：和同一人 ${o.start}–${o.end} 的紀錄時間重疊`:'';
+}
+
+// ═══ 報工輸入頁（廠內 / 廠外共用） ═══
+const FORM={ws:{},fs:{}};
+const FILTER={ws:{},fs:{}};
+const fsType=()=>M().types.find(t=>code(t)==='FS')||'FS 客戶現場服務';
+const wsTypes=()=>M().types.filter(t=>code(t)!=='FS');
+function blankForm(kind){
+  const keep=FORM[kind]||{};
+  return {id:null,kind:kind.toUpperCase(),date:keep.date||today(),staff:keep.staff||myName(),
+    type:kind==='ws'?(wsTypes()[0]||'WS 工單維修'):fsType(),shift:'',start:'',end:'',wo:'',station:'',cust:'',travel:'',svc:'',model:'',modelNo:'',note:''};
+}
+function buildPage(kind){
+  const isWS=kind==='ws', el=document.getElementById('p-'+kind);
+  el.innerHTML=`
+  <div class="card"><div class="card-hd"><h2 id="${kind}-ttl">${isWS?'🔧 廠內／其他（Workshop 及非客戶現場工作）':'🚐 廠外報工（客戶現場服務 Field Service）'}</h2>
+    <span class="hint">一件工作填一筆；做完就填或下班前補完都可以。* 為必填</span></div>
+  <div class="card-bd"><div class="frm">
+    <label class="req">日期</label><div class="row"><input type="date" class="inp" id="${kind}-date">
+      <button class="btn btn-o btn-s" onclick="setF('${kind}','date',today())">今天</button></div>
+    <label class="req">人員</label><div class="chips" id="${kind}-staff"></div>
+    ${isWS?`<label class="req">工作類型</label><div class="chips" id="${kind}-type"></div>`:
+    `<label class="req" id="${kind}-svcL">服務項目</label><div class="chips" id="${kind}-svc"></div>`}
+    <label class="req">時間</label><div class="row"><div class="chips" id="${kind}-shift"></div>
+      <input class="inp t" id="${kind}-start" placeholder="開始"> – <input class="inp t" id="${kind}-end" placeholder="結束">
+      <span class="hint">點時段一鍵帶入，或直接打 830、1730</span></div>
+    ${isWS?`
+    <label id="${kind}-stL" class="req" data-show="WS">站別</label><div class="chips" id="${kind}-station" data-show="WS"></div>
+    <label data-show="WS,SYS,TEST">工單號</label><div class="row" data-show="WS,SYS,TEST"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填，例如 WO2026…">
+      <span class="hint">選填；輸入用過的工單會自動帶出機種、型號</span></div>
+    <label data-show="WS,SYS,TEST">機種</label><div class="chips" id="${kind}-model" data-show="WS,SYS,TEST"></div>
+    <label data-show="WS,SYS,TEST">型號</label><div class="row" data-show="WS,SYS,TEST"><input class="inp" id="${kind}-modelNo" list="mnList-${kind}" style="width:220px" placeholder="例如 RA0100F">
+      <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`:`
+    <label id="${kind}-custL">客戶</label><div class="row"><input class="inp" id="${kind}-cust" list="custList" style="width:220px" placeholder="選擇或輸入客戶">
+      <span class="hint">新客戶可直接輸入，常用的再到主檔新增</span></div>
+    <label>交通時數</label><div class="row"><div class="chips" id="${kind}-travel"></div><span class="hint">來回合計，小時</span></div>
+    <label>工單號</label><div class="row"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填">
+      <span class="hint">輸入用過的工單會自動帶出機種、型號</span></div>
+    <label>機種</label><div class="chips" id="${kind}-model"></div>
+    <label>型號</label><div class="row"><input class="inp" id="${kind}-modelNo" list="mnList-${kind}" style="width:220px" placeholder="例如 RA0100F">
+      <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`}
+    <label>備註</label><input class="inp" id="${kind}-note" style="width:100%;max-width:560px" placeholder="${isWS?'發現的問題、缺料、上課或支援的內容…':'服務內容、更換零件、待辦…'}">
+    <label></label><div class="row">
+      <span class="calc" id="${kind}-calc">工時 —</span>
+      <button class="btn btn-p" id="${kind}-save" onclick="saveForm('${kind}')">＋ 新增</button>
+      <button class="btn btn-o" id="${kind}-cancel" style="display:none" onclick="cancelEdit('${kind}')">取消編輯</button>
+      <span class="msg" id="${kind}-msg"></span></div>
+  </div></div></div><datalist id="mnList-${kind}"></datalist>
+  <div class="card"><div class="card-hd"><h2>📋 報工紀錄</h2>
+    <input type="date" class="inp" id="${kind}-f1"> ~ <input type="date" class="inp" id="${kind}-f2">
+    <select class="inp" id="${kind}-fp"><option value="">全部人員</option></select>
+    <input class="inp" id="${kind}-fq" placeholder="搜尋工單／客戶／備註" style="width:180px">
+    <label class="hint"><input type="checkbox" id="${kind}-fe"> 只看待修正</label>
+  </div><div class="card-bd"><div class="tw"><table class="dt" id="${kind}-tbl"></table></div>
+    <div class="hint" id="${kind}-sum" style="margin-top:6px"></div></div></div>`;
+  ['date','start','end','wo','cust','modelNo','note'].forEach(f=>{
+    const i=document.getElementById(kind+'-'+f); if(!i) return;
+    if(f==='wo') i.addEventListener('change',()=>woFill(kind));
+    i.addEventListener('input',()=>{FORM[kind][f]=i.value; if(f==='start'||f==='end'){FORM[kind].shift='';paintChips(kind)} updCalc(kind)});
+    if(f==='start'||f==='end') i.addEventListener('blur',()=>{const n=normTime(i.value);
+      if(n===null){i.classList.add('err');return} i.classList.remove('err'); i.value=n; FORM[kind][f]=n; matchShift(kind); updCalc(kind)});
+    i.addEventListener('keydown',e=>{if(e.key==='Enter'){i.blur();saveForm(kind)}});
+  });
+  const d=new Date(); d.setDate(d.getDate()-13);
+  document.getElementById(kind+'-f1').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  document.getElementById(kind+'-f2').value=today();
+  ['f1','f2','fp','fq','fe'].forEach(f=>document.getElementById(kind+'-'+f).addEventListener(f==='fq'?'input':'change',()=>renderList(kind)));
+  FORM[kind]=blankForm(kind);
+}
+function chipHTML(kind,field,opts,labelFn){
+  return opts.map(o=>`<button class="chip" data-v="${esc(o)}" onclick="setF('${kind}','${field}',this.dataset.v)">${labelFn?labelFn(o):esc(o)}</button>`).join('');
+}
+function paintAllChips(kind){
+  document.getElementById(kind+'-staff').innerHTML=chipHTML(kind,'staff',M().staff);
+  if(kind==='ws') document.getElementById(kind+'-type').innerHTML=chipHTML(kind,'type',wsTypes(),t=>{const[c,...n]=t.split(' ');return `${esc(c)}<small>${esc(n.join(' '))}</small>`});
+  document.getElementById(kind+'-shift').innerHTML=chipHTML(kind,'shift',Object.keys(M().shifts));
+  document.getElementById(kind+'-model').innerHTML=chipHTML(kind,'model',M().models);
+  if(kind==='fs') document.getElementById(kind+'-svc').innerHTML=chipHTML(kind,'svc',M().services);
+  if(kind==='ws') document.getElementById('ws-station').innerHTML=chipHTML(kind,'station',M().stations);
+  else document.getElementById('fs-travel').innerHTML=chipHTML(kind,'travel',TRAVEL_OPTS.map(String),v=>v==='0'?'0':v);
+  const fp=document.getElementById(kind+'-fp'), cur=fp.value;
+  fp.innerHTML='<option value="">全部人員</option>'+M().staff.map(s=>`<option>${esc(s)}</option>`).join('');
+  fp.value=cur; paintChips(kind);
+}
+function paintChips(kind){
+  const F=FORM[kind];
+  document.querySelectorAll(`#p-${kind} .chips`).forEach(box=>{
+    const field=box.id.split('-')[1];
+    box.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',String(F[field])===c.dataset.v));
+  });
+  ['date','start','end','wo','cust','modelNo','note'].forEach(f=>{const i=document.getElementById(kind+'-'+f);if(i&&document.activeElement!==i)i.value=F[f]||''});
+  const c=code(F.type);
+  document.querySelectorAll(`#p-${kind} [data-show]`).forEach(e=>e.style.display=e.dataset.show.split(',').includes(c)?'':'none');
+  if(kind==='fs') document.getElementById('fs-custL').classList.add('req');
+  const mn=[...new Set(live().filter(r=>r.modelNo&&(!F.model||r.model===F.model)).map(r=>r.modelNo))].sort();
+  document.getElementById('mnList-'+kind).innerHTML=mn.map(v=>`<option value="${esc(v)}">`).join('');
+  updCalc(kind);
+}
+function woFill(kind){
+  const F=FORM[kind], w=(F.wo||'').trim().toUpperCase(); if(!w) return;
+  const prev=live().filter(r=>r.wo===w&&(r.model||r.modelNo)).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+  if(prev){if(!F.model)F.model=prev.model||''; if(!F.modelNo)F.modelNo=prev.modelNo||''; paintChips(kind)}
+}
+function setF(kind,field,v){
+  const F=FORM[kind];
+  if((field==='station'||field==='travel'||field==='model')&&String(F[field])===v) v='';   // 再點一次取消
+  F[field]=v;
+  if(field==='shift'&&M().shifts[v]){F.start=M().shifts[v][0];F.end=M().shifts[v][1];
+    document.getElementById(kind+'-start').classList.remove('err');document.getElementById(kind+'-end').classList.remove('err')}
+  paintChips(kind);
+}
+function matchShift(kind){const F=FORM[kind];F.shift=Object.keys(M().shifts).find(k=>M().shifts[k][0]===F.start&&M().shifts[k][1]===F.end)||'';paintChips(kind)}
+function updCalc(kind){
+  const F=FORM[kind], h=hoursOf(F), el=document.getElementById(kind+'-calc');
+  if(!h){el.textContent='工時 —';return}
+  el.textContent=kind==='fs'&&+F.travel?`工時 ${fmt1(h)} h（現場 ${fmt1(h-F.travel)}／交通 ${F.travel}）`:`工時 ${fmt1(h)} h`;
+}
+function saveForm(kind){
+  const F=FORM[kind], msg=document.getElementById(kind+'-msg');
+  ['start','end'].forEach(f=>{const n=normTime(document.getElementById(kind+'-'+f).value);if(n)F[f]=n});
+  if(kind==='fs') F.type=fsType();
+  if(kind==='ws'){const c=code(F.type); if(!['WS','SYS','TEST'].includes(c)){F.wo='';F.model='';F.modelNo=''} if(c!=='WS') F.station=''}
+  F.wo=(F.wo||'').trim().toUpperCase(); F.cust=(F.cust||'').trim(); F.modelNo=(F.modelNo||'').trim().toUpperCase();
+  const rec={...F,kind:kind.toUpperCase(),travel:kind==='fs'?(F.travel===''?0:+F.travel):'',
+    station:kind==='ws'?F.station:'',cust:kind==='fs'?F.cust:'',svc:code(F.type)==='FS'?F.svc:''};
+  const err=checkRec(rec);
+  if(err){msg.className='msg bad';msg.textContent='⚠ '+err;return}
+  const warn=overlapWarn(rec);
+  const now=Date.now();
+  if(rec.id){const i=DB.records.findIndex(x=>x.id===rec.id); DB.records[i]={...DB.records[i],...rec,updatedAt:now}}
+  else DB.records.push({...rec,id:uid(),createdAt:now,updatedAt:now});
+  persist();
+  msg.className='msg '+(warn?'warn':'ok'); msg.textContent=(rec.id?'✔ 已更新':'✔ 已新增')+`：${rec.staff} ${rec.date} ${fmt1(hoursOf(rec))}h`+(warn?'　'+warn:'');
+  FORM[kind]=blankForm(kind); document.getElementById(kind+'-save').textContent='＋ 新增';
+  document.getElementById(kind+'-cancel').style.display='none';
+  paintChips(kind); renderAll(); if(formUrl()) uploadClick(); else autoSync();
+}
+function editRec(kind,id){
+  const r=DB.records.find(x=>x.id===id); if(!r) return;
+  FORM[kind]={...blankForm(kind),...r,travel:r.travel===''||r.travel==null?'':String(r.travel)};
+  matchShift(kind);
+  document.getElementById(kind+'-save').textContent='💾 更新';
+  document.getElementById(kind+'-cancel').style.display='';
+  document.getElementById(kind+'-msg').textContent='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEdit(kind){FORM[kind]=blankForm(kind);document.getElementById(kind+'-save').textContent='＋ 新增';
+  document.getElementById(kind+'-cancel').style.display='none';paintChips(kind)}
+function delRec(id){
+  const r=DB.records.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`刪除這筆？\n${r.date} ${r.staff} ${r.start}–${r.end} ${r.type}`)) return;
+  r.deleted=true; r.updatedAt=Date.now(); persist(); renderAll(); if(formUrl()) uploadClick(); else autoSync();
+}
+const mdl=r=>[r.model,r.modelNo].filter(Boolean).map(esc).join(' ')||'<span class="hint">-</span>';
+function tagHTML(t){const c=code(t);return `<span class="tag" style="background:${TYPE_COLOR[c]||'#546E7A'}">${esc(c)}</span>`}
+function renderList(kind){
+  const K=kind.toUpperCase(), g=id=>document.getElementById(kind+'-'+id).value;
+  const f1=g('f1'),f2=g('f2'),fp=g('fp'),fq=g('fq').trim().toLowerCase(),fe=document.getElementById(kind+'-fe').checked;
+  let rows=live().filter(r=>r.kind===K&&(!f1||r.date>=f1)&&(!f2||r.date<=f2)&&(!fp||r.staff===fp)
+    &&(!fq||[r.wo,r.cust,r.note,r.station,r.model,r.modelNo].join(' ').toLowerCase().includes(fq))&&(!fe||checkRec(r)));
+  rows.sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start)||a.staff.localeCompare(b.staff));
+  const isWS=kind==='ws';
+  const head=`<tr><th>日期</th><th>人員</th><th>類型</th><th>時間</th>${isWS?'<th>工單號</th><th>機種／型號</th><th>站別</th>':'<th>客戶</th><th>服務項目</th><th class="n">交通</th><th class="n">現場</th><th>工單號</th><th>機種／型號</th>'}<th class="n">工時</th><th>備註</th><th></th></tr>`;
+  if(!rows.length){document.getElementById(kind+'-tbl').innerHTML=head+`<tr><td colspan="13" class="empty">這個區間沒有紀錄</td></tr>`;document.getElementById(kind+'-sum').textContent='';return}
+  let tot=0;
+  const body=rows.map(r=>{const h=hoursOf(r),e=checkRec(r);tot+=h;
+    return `<tr><td>${r.date.slice(5).replace('-','/')}</td><td>${esc(r.staff)}</td><td>${tagHTML(r.type)}${esc(r.type.split(' ').slice(1).join(' '))}</td>
+    <td>${r.start}–${r.end}${r.shift?` <span class="hint">${esc(r.shift)}</span>`:''}</td>
+    ${isWS?`<td>${esc(r.wo)}</td><td>${mdl(r)}</td><td>${esc(r.station)}</td>`:`<td>${esc(r.cust)}</td><td>${esc(r.svc||'')}</td><td class="n">${r.travel||'-'}</td><td class="n">${fmt1(h-(+r.travel||0))}</td><td>${esc(r.wo)}</td><td>${mdl(r)}</td>`}
+    <td class="n"><b>${fmt1(h)}</b></td><td>${esc(r.note)}${e?` <span class="bad-cell">⚠ ${esc(e)}</span>`:''}</td>
+    <td style="white-space:nowrap"><button class="ib" title="編輯" onclick="editRec('${kind}','${r.id}')">✎</button><button class="ib del" title="刪除" onclick="delRec('${r.id}')">✕</button></td></tr>`}).join('');
+  document.getElementById(kind+'-tbl').innerHTML=head+body;
+  document.getElementById(kind+'-sum').textContent=`共 ${rows.length} 筆，合計 ${fmt1(tot)} 小時`;
+}
+
+// ═══ 今日看板 ═══
+function bShift(n){const i=document.getElementById('bDate');const d=new Date(i.value);d.setDate(d.getDate()+n);
+  i.value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());renderBoard()}
+function renderBoard(){
+  const date=document.getElementById('bDate').value||today();
+  const am=M().shifts['上午'],pm=M().shifts['下午'];
+  const recs=live().filter(r=>r.date===date);
+  const inRange=(r,[s,e])=>toMin(r.start)<toMin(e)&&toMin(r.end)>toMin(s);
+  const item=r=>{const c=code(r.type);const what=c==='WS'?[r.modelNo||r.model,r.wo,r.station].filter(Boolean).join(' '):([r.cust,r.svc].filter(Boolean).join(' ')||r.note||r.type.split(' ').slice(1).join(' '));
+    return `<span class="bitem">${tagHTML(r.type)}${esc(what)}<span class="tm">${r.start}–${r.end}</span></span>`};
+  let html=`<tr><th>人員</th><th>上午 ${am[0]}–${am[1]}</th><th>下午 ${pm[0]}–${pm[1]}</th><th style="text-align:center">工時</th></tr>`;
+  let missing=0;
+  M().staff.forEach(s=>{
+    const mine=recs.filter(r=>r.staff===s).sort((a,b)=>a.start.localeCompare(b.start));
+    const a=mine.filter(r=>inRange(r,am)),p=mine.filter(r=>inRange(r,pm));
+    const h=mine.reduce((t,r)=>t+hoursOf(r),0); if(!mine.length) missing++;
+    html+=`<tr><td>${esc(s)}</td><td>${a.map(item).join('')||'<span class="none">— 未報工</span>'}</td>
+      <td>${p.map(item).join('')||'<span class="none">— 未報工</span>'}</td><td>${h?fmt1(h):'<span class="none">0</span>'}</td></tr>`;
+  });
+  document.getElementById('bTbl').innerHTML=html;
+  document.getElementById('bHint').textContent=`${date}　已報工 ${M().staff.length-missing} 人／未報工 ${missing} 人　·　更新時間 ${new Date().toLocaleTimeString('zh-TW',{hour12:false})}（同步設定後每 2 分鐘自動更新）`;
+}
+
+// ═══ 月報 ═══
+function monthRecs(){const m=document.getElementById('rMonth').value;return live().filter(r=>r.date.slice(0,7)===m)}
+function renderReport(){
+  const recs=monthRecs(), codes=M().types.map(code);
+  const H=r=>hoursOf(r);
+  const sum=a=>a.reduce((t,r)=>t+H(r),0);
+  const ws=recs.filter(r=>r.kind==='WS'),fs=recs.filter(r=>r.kind==='FS'),bad=recs.filter(checkRec);
+  const travel=fs.reduce((t,r)=>t+(+r.travel||0),0);
+  let h=`<div class="kpig">
+    <div class="kc"><div class="kv cb">${fmt1(sum(recs))}</div><div class="kl">總工時 h</div></div>
+    <div class="kc"><div class="kv">${fmt1(sum(ws))}</div><div class="kl">廠內工時 h</div></div>
+    <div class="kc"><div class="kv cg">${fmt1(sum(fs))}</div><div class="kl">廠外工時 h</div></div>
+    <div class="kc"><div class="kv co">${fmt1(travel)}</div><div class="kl">其中交通 h</div></div>
+    <div class="kc"><div class="kv">${recs.length}</div><div class="kl">報工筆數</div></div>
+    <div class="kc"><div class="kv ${bad.length?'cr':''}">${bad.length}</div><div class="kl">待修正</div></div></div>`;
+  // 人員 × 類型
+  h+=`<h3 style="font-size:13px;margin:6px 0">① 人員 × 工作類型（小時）</h3><div class="tw"><table class="dt"><tr><th>人員</th>${codes.map(c=>`<th class="n">${esc(c)}</th>`).join('')}<th class="n">合計</th></tr>`;
+  const colT=codes.map(()=>0);
+  const people=[...new Set([...M().staff,...recs.map(r=>r.staff)])];
+  people.forEach(p=>{const mine=recs.filter(r=>r.staff===p);let t=0;
+    const cells=codes.map((c,i)=>{const v=sum(mine.filter(r=>code(r.type)===c));colT[i]+=v;t+=v;return `<td class="n">${v?fmt1(v):'-'}</td>`}).join('');
+    h+=`<tr><td>${esc(p)}</td>${cells}<td class="n"><b>${t?fmt1(t):'-'}</b></td></tr>`});
+  h+=`<tr class="tot"><td>合計</td>${colT.map(v=>`<td class="n">${fmt1(v)}</td>`).join('')}<td class="n">${fmt1(colT.reduce((a,b)=>a+b,0))}</td></tr></table></div>`;
+  // 工單
+  // 工單 → 機種（同一工單任何一筆有填就沿用，查全部歷史）
+  const woM={};live().filter(r=>r.wo&&(r.model||r.modelNo)).sort((x,y)=>x.updatedAt-y.updatedAt).forEach(r=>{woM[r.wo]={model:r.model||(woM[r.wo]||{}).model||'',modelNo:r.modelNo||(woM[r.wo]||{}).modelNo||''}});
+  const mOf=r=>r.model||(woM[r.wo]||{}).model||'', mnOf=r=>r.modelNo||(woM[r.wo]||{}).modelNo||'';
+  const wos={};recs.filter(r=>r.wo).forEach(r=>{(wos[r.wo]=wos[r.wo]||[]).push(r)});
+  const st=M().stations, nf=v=>v?fmt1(v):'-';
+  h+=`<h3 style="font-size:13px;margin:16px 0 6px">② 工單工時（本月有報工的工單，依總工時排序）</h3><div class="tw"><table class="dt"><tr><th>工單號</th><th>機種</th><th>型號</th>${st.map(s=>`<th class="n">${esc(s)}</th>`).join('')}<th class="n">廠內其他</th><th class="n">廠外</th><th class="n">合計</th><th>人員</th></tr>`;
+  const woRows=Object.entries(wos).map(([w,rs])=>({w,rs,t:sum(rs)})).sort((a,b)=>b.t-a.t);
+  if(!woRows.length) h+=`<tr><td colspan="${st.length+7}" class="empty">本月沒有填工單號的紀錄</td></tr>`;
+  woRows.forEach(({w,rs,t})=>{const wsr=rs.filter(r=>r.kind==='WS'),m=woM[w]||{};
+    h+=`<tr><td>${esc(w)}</td><td>${esc(m.model||'')}</td><td>${esc(m.modelNo||'')}</td>${st.map(s=>`<td class="n">${nf(sum(wsr.filter(r=>r.station===s)))}</td>`).join('')}
+      <td class="n">${nf(sum(wsr.filter(r=>!st.includes(r.station))))}</td><td class="n">${nf(sum(rs.filter(r=>r.kind==='FS')))}</td>
+      <td class="n"><b>${fmt1(t)}</b></td><td>${esc([...new Set(rs.map(r=>r.staff))].join('、'))}</td></tr>`});
+  h+=`</table></div>`;
+  // 機種實績
+  const mr=recs.filter(r=>mOf(r)||mnOf(r));
+  const grp={};mr.forEach(r=>{const m=mOf(r)||'(未選機種)',n=mnOf(r)||'(未填型號)';((grp[m]=grp[m]||{})[n]=grp[m][n]||[]).push(r)});
+  const mRow=(label,rs,cls,indent)=>{const wsr=rs.filter(r=>r.kind==='WS'),nW=new Set(rs.filter(r=>r.wo).map(r=>r.wo)).size,t=sum(rs),tw=sum(rs.filter(r=>r.wo));
+    return `<tr class="${cls}"><td style="${indent?'padding-left:26px':''}">${label}</td><td class="n">${nW||'-'}</td><td class="n">${rs.length}</td>
+      ${st.map(s=>`<td class="n">${nf(sum(wsr.filter(r=>r.station===s)))}</td>`).join('')}<td class="n">${nf(sum(wsr.filter(r=>!st.includes(r.station))))}</td>
+      <td class="n">${nf(sum(rs.filter(r=>r.kind==='FS')))}</td><td class="n"><b>${fmt1(t)}</b></td><td class="n">${nW?fmt1(tw/nW):'-'}</td></tr>`};
+  h+=`<h3 style="font-size:13px;margin:16px 0 6px">③ 機種實績（本月，機種小計 → 各型號）</h3><div class="tw"><table class="dt"><tr><th>機種／型號</th><th class="n">工單數</th><th class="n">筆數</th>${st.map(s=>`<th class="n">${esc(s)}</th>`).join('')}<th class="n">廠內其他</th><th class="n">廠外</th><th class="n">合計 h</th><th class="n">平均每工單 h</th></tr>`;
+  const mKeys=Object.keys(grp).sort((a,b)=>{const ia=M().models.indexOf(a),ib=M().models.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib)||a.localeCompare(b)});
+  if(!mKeys.length) h+=`<tr><td colspan="${st.length+7}" class="empty">本月沒有填機種或型號的紀錄</td></tr>`;
+  mKeys.forEach(m=>{const all=Object.values(grp[m]).flat();h+=mRow('<b>'+esc(m)+'</b>',all,'tot',false);
+    Object.keys(grp[m]).sort().forEach(n=>h+=mRow(esc(n),grp[m][n],'',true))});
+  h+=`</table></div><div class="hint" style="margin-top:4px">平均每工單 h = 有填工單號的工時 ÷ 工單數。工單只要有一筆填了機種、型號，同工單的其他筆會自動歸到同一機種。沒填工單也沒填機種的紀錄（例如 5S、教育訓練）不列入本表。</div>`;
+  // 客戶（含服務項目拆分）
+  const SV=M().services, fsc=recs.filter(r=>code(r.type)==='FS');
+  const cs={};fs.forEach(r=>{const k=r.cust||'(未填)';(cs[k]=cs[k]||[]).push(r)});
+  h+=`<h3 style="font-size:13px;margin:16px 0 6px">④ 廠外客戶別</h3><div class="tw"><table class="dt"><tr><th>客戶</th><th class="n">人次</th>${SV.map(v=>`<th class="n">${esc(v)} h</th>`).join('')}<th class="n">其他 h</th><th class="n">現場 h</th><th class="n">交通 h</th><th class="n">合計 h</th><th class="n">平均每人次 h</th></tr>`;
+  const cRows=Object.entries(cs).map(([c,rs])=>{const t=sum(rs),tr=rs.reduce((a,r)=>a+(+r.travel||0),0);return {c,rs,n:rs.length,t,tr}}).sort((a,b)=>b.t-a.t);
+  if(!cRows.length) h+=`<tr><td colspan="${SV.length+8}" class="empty">本月沒有廠外紀錄</td></tr>`;
+  cRows.forEach(x=>h+=`<tr><td>${esc(x.c)}</td><td class="n">${x.n}</td>${SV.map(v=>`<td class="n">${nf(sum(x.rs.filter(r=>r.svc===v)))}</td>`).join('')}<td class="n">${nf(sum(x.rs.filter(r=>!SV.includes(r.svc))))}</td>
+    <td class="n">${fmt1(x.t-x.tr)}</td><td class="n">${fmt1(x.tr)}</td><td class="n"><b>${fmt1(x.t)}</b></td><td class="n">${fmt1(x.t/x.n)}</td></tr>`);
+  h+=`</table></div><div class="hint" style="margin-top:4px">各服務項目的工時含交通；「其他」是 SYS、TEST 等非 FS 的廠外紀錄。</div>`;
+  // 服務項目 × 機種
+  const sg={};fsc.forEach(r=>{const v=r.svc||'(未選)',m=[mOf(r),mnOf(r)].filter(Boolean).join(' ')||'(未填機種)';((sg[v]=sg[v]||{})[m]=sg[v][m]||[]).push(r)});
+  const sRow=(label,rs,cls,indent)=>{const t=sum(rs),tr=rs.reduce((a,r)=>a+(+r.travel||0),0),n=rs.length;
+    return `<tr class="${cls}"><td style="${indent?'padding-left:26px':''}">${label}</td><td class="n">${n}</td><td class="n">${fmt1(t-tr)}</td><td class="n">${fmt1(tr)}</td><td class="n"><b>${fmt1(t)}</b></td><td class="n">${fmt1((t-tr)/n)}</td><td class="n">${fmt1(t/n)}</td></tr>`};
+  h+=`<h3 style="font-size:13px;margin:16px 0 6px">⑤ 服務項目 × 機種（客戶現場服務 FS，計費檢討用）</h3><div class="tw"><table class="dt" style="max-width:900px"><tr><th>服務項目／機種</th><th class="n">人次</th><th class="n">現場 h</th><th class="n">交通 h</th><th class="n">合計 h</th><th class="n">平均現場 h／人次</th><th class="n">平均合計 h／人次</th></tr>`;
+  const sKeys=Object.keys(sg).sort((a,b)=>{const ia=SV.indexOf(a),ib=SV.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib)});
+  if(!sKeys.length) h+=`<tr><td colspan="7" class="empty">本月沒有客戶現場服務紀錄</td></tr>`;
+  sKeys.forEach(v=>{h+=sRow('<b>'+esc(v)+'</b>',Object.values(sg[v]).flat(),'tot',false);
+    Object.keys(sg[v]).sort().forEach(m=>h+=sRow(esc(m),sg[v][m],'',true))});
+  h+=`</table></div><div class="hint" style="margin-top:4px">人次 = 報工筆數；兩人同行做同一件工作會算 2 人次。</div>`;
+  if(bad.length) h+=`<div class="box r" style="margin-top:14px"><b>待修正 ${bad.length} 筆</b><p>${bad.map(r=>`${r.date} ${esc(r.staff)} ${r.start}–${r.end}：${esc(checkRec(r))}`).join('<br>')}</p></div>`;
+  document.getElementById('rBody').innerHTML=h;
+}
+function exportCSV(scope){
+  const rs=(scope==='month'?monthRecs():live()).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const cols=['區分','日期','人員','類型代碼','工作類型','時段','開始','結束','總工時h','交通h','現場h','工單號','機種','型號','站別','客戶','服務項目','備註','檢查'];
+  const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const lines=[cols.join(',')].concat(rs.map(r=>{const h=hoursOf(r),t=+r.travel||0;
+    return [r.kind==='WS'?'廠內':'廠外',r.date,r.staff,code(r.type),r.type,r.shift,r.start,r.end,h,r.kind==='FS'?t:'',r.kind==='FS'?Math.round((h-t)*10)/10:'',r.wo,r.model,r.modelNo,r.station,r.cust,r.svc,r.note,checkRec(r)||'OK'].map(q).join(',')}));
+  download('﻿'+lines.join('\r\n'),`報工_${scope==='month'?document.getElementById('rMonth').value:'全部'}.csv`,'text/csv;charset=utf-8');
+}
+function download(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+
+// ═══ 合併（同步與匯入共用） ═══
+function mergeDB(a,b){
+  if(!b||!Array.isArray(b.records)) return a;
+  const map=new Map(a.records.map(r=>[r.id,r]));
+  b.records.forEach(r=>{const x=map.get(r.id);if(!x||(r.updatedAt||0)>(x.updatedAt||0))map.set(r.id,r)});
+  const master=(b.master&&b.master.staff&&(b.master.updatedAt||0)>(a.master.updatedAt||0))?b.master:a.master;
+  return {app:'service-report',ver:1,records:[...map.values()],master:fixMaster(master)};
+}
+
+// ═══ 同步共用檔（File System Access API + IndexedDB 記住檔案） ═══
+const IDB={db:null,
+  open(){return this.db?Promise.resolve(this.db):new Promise((ok,no)=>{const q=indexedDB.open('svc_report_sync',1);
+    q.onupgradeneeded=()=>q.result.createObjectStore('h');q.onsuccess=()=>{this.db=q.result;ok(this.db)};q.onerror=()=>no(q.error)})},
+  async get(k){const db=await this.open();return new Promise(ok=>{const q=db.transaction('h').objectStore('h').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})},
+  async set(k,v){const db=await this.open();return new Promise(ok=>{const t=db.transaction('h','readwrite');t.objectStore('h').put(v,k);t.oncomplete=ok})},
+  async del(k){const db=await this.open();return new Promise(ok=>{const t=db.transaction('h','readwrite');t.objectStore('h').delete(k);t.oncomplete=ok})}};
+let syncing=false;
+function setSt(t,color){const e=document.getElementById('syncSt');e.textContent=t;e.style.color=color||'#90CAF9'}
+const fsSupported=()=>'showOpenFilePicker' in window;
+async function pickShared(create){
+  if(!fsSupported()){alert('這個瀏覽器不支援共用檔同步，請用電腦版 Chrome 或 Edge 開啟。');return}
+  try{
+    const opt={types:[{description:'報工共用檔',accept:{'application/json':['.json']}}]};
+    const h=create?await showSaveFilePicker({...opt,suggestedName:'報工_shared.json'}):(await showOpenFilePicker(opt))[0];
+    await IDB.set('file',h); await syncNow(true);
+  }catch(e){if(e.name!=='AbortError')alert('設定失敗：'+e.message)}
+}
+async function forgetShared(){await IDB.del('file');setSt('尚未設定共用檔');showFileName()}
+async function showFileName(){const h=await IDB.get('file').catch(()=>null);const el=document.getElementById('syncFile');if(el)el.textContent=h?h.name:'未設定';
+  const d=await IDB.get('inbox').catch(()=>null);const e2=document.getElementById('inboxName');if(e2)e2.textContent=d?d.name:'未設定';
+  const fm=document.getElementById('formUrl');if(fm&&document.activeElement!==fm)fm.value=formUrl()||M().formUrl||'';
+  const fs=document.getElementById('formSt');if(fs)fs.textContent=formUrl()?'✔ 這台已啟用':'（未啟用）';
+  const hu=document.getElementById('hostUrl');if(hu&&document.activeElement!==hu)hu.value=localStorage.getItem(HOST_KEY)||'';
+  const cf=document.getElementById('cfgFormUrl');if(cf&&document.activeElement!==cf)cf.value=M().formUrl||formUrl()||'';
+  const mn=document.getElementById('meName');if(mn)mn.textContent=myName()||'未設定（共用）'}
+async function syncNow(interactive){
+  if(syncing) return;
+  if(flowUrl()) return httpSync(interactive);
+  if(formUrl()){if(interactive) uploadClick(); else updUpBtn(); return}
+  if(!fsSupported()){if(interactive)alert('這個瀏覽器不支援共用檔同步，請用電腦版 Chrome 或 Edge 開啟。');return}
+  const h=await IDB.get('file').catch(()=>null);
+  if(!h){if(interactive){openAdmin();mTab('sync')}return}
+  let p=await h.queryPermission({mode:'readwrite'});
+  if(p!=='granted'){if(!interactive){setSt('需授權：請按「🔄 同步」','#FFAB91');return}
+    p=await h.requestPermission({mode:'readwrite'}); if(p!=='granted'){setSt('未授權，無法同步','#FFAB91');return}}
+  syncing=true; setSt('同步中…');
+  try{
+    const txt=await (await h.getFile()).text();
+    let remote=null;
+    if(txt.trim()){remote=JSON.parse(txt); if(remote.app!=='service-report') throw new Error('選到的不是報工共用檔')}
+    DB=mergeDB(DB,remote);
+    const inbox=await readInbox(interactive);
+    inbox.items.forEach(it=>{DB=mergeDB(DB,{records:it.data.records||[],master:it.data.master||{updatedAt:0}})});
+    const w=await h.createWritable(); await w.write(JSON.stringify(DB)); await w.close();
+    for(const it of inbox.items){try{await inbox.dir.removeEntry(it.name)}catch(e){}}
+    persist(); renderAll(true);
+    setSt(`${inbox.items.length?'收件匣 '+inbox.items.length+' 批已併入 · ':''}✔ 已同步 ${new Date().toLocaleTimeString('zh-TW',{hour12:false,hour:'2-digit',minute:'2-digit'})}（${h.name}，${live().length} 筆）`,'#A5D6A7');
+  }catch(e){setSt('同步失敗：'+e.message,'#FFAB91'); if(interactive) alert('同步失敗：'+e.message)}
+  finally{syncing=false; showFileName()}
+}
+// ── 報工電腦：HTTP 流程同步 ──
+const FLOW_KEY='svc_report_flow_url', PUSH_KEY='svc_report_last_push';
+const flowUrl=()=>localStorage.getItem(FLOW_KEY)||'';
+function decodeFlowBody(j){
+  if(j&&typeof j==='object'&&j['$content']){const b=atob(j['$content']);return JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))))}
+  return typeof j==='string'?JSON.parse(j):j;
+}
+async function httpSync(interactive){
+  syncing=true; setSt('同步中（網路）…');
+  try{
+    const last=+localStorage.getItem(PUSH_KEY)||0, t0=Date.now();
+    const recs=DB.records.filter(r=>(r.updatedAt||0)>last);
+    const payload={app:'service-report',ver:1,from:'flow',records:recs,master:(M().updatedAt||0)>last?M():null};
+    const res=await fetch(flowUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error('流程回應 '+res.status);
+    const txt=await res.text(); let remote=null;
+    if(txt.trim()){remote=decodeFlowBody(JSON.parse(txt)); if(remote&&remote.app!=='service-report') remote=null}
+    if(remote) DB=mergeDB(DB,remote);
+    localStorage.setItem(PUSH_KEY,String(t0-1000));
+    persist(); renderAll(true);
+    setSt(`✔ 已同步 ${new Date().toLocaleTimeString('zh-TW',{hour12:false,hour:'2-digit',minute:'2-digit'})}（網路，上傳 ${recs.length} 筆）`,'#A5D6A7');
+    return true;
+  }catch(e){setSt('網路同步失敗：'+e.message+'（資料仍在本機，稍後自動重試）','#FFAB91'); if(interactive) alert('同步失敗：'+e.message); return false}
+  finally{syncing=false}
+}
+function saveFlowUrl(){
+  const u=document.getElementById('flowUrl').value.trim();
+  if(!/^https:\/\//.test(u)){alert('請貼上以 https:// 開頭的流程網址');return}
+  localStorage.setItem(FLOW_KEY,u); httpSync(true).then(ok=>{if(ok)alert('連線成功，這台電腦已改用網路同步。')});
+}
+function clearFlowUrl(){localStorage.removeItem(FLOW_KEY);document.getElementById('flowUrl').value='';setSt('已清除流程網址')}
+// ── 報工電腦：Forms 預先填入上傳 ──
+const DEFAULT_FORM_URL='';  // 公開版不內建；由主檔 formUrl 或設定連結提供
+const FORM_KEY='svc_report_form_url', SENT_KEY='svc_report_form_sent', CHUNK_MAX=3500;
+const formUrl=()=>localStorage.getItem(FORM_KEY)||'';
+let formQueue=[];
+function parseFormUrl(u){const m=u.match(/[?&](r[0-9a-f]{20,})=/i); if(!m) return null; return {base:u.slice(0,m.index), key:m[1]}}
+const b64u={enc:b=>{let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')},
+  dec:t=>{t=t.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';return Uint8Array.from(atob(t),c=>c.charCodeAt(0))}};
+async function streamBytes(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
+async function packText(obj){
+  const raw=new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream==='undefined') return 'SR0:'+b64u.enc(raw);
+  return 'SR1:'+b64u.enc(await streamBytes(raw,new CompressionStream('deflate-raw')));
+}
+async function unpackText(t){
+  t=(t||'').trim();
+  if(t.startsWith('SR1:')) return JSON.parse(new TextDecoder().decode(await streamBytes(b64u.dec(t.slice(4)),new DecompressionStream('deflate-raw'))));
+  if(t.startsWith('SR0:')) return JSON.parse(new TextDecoder().decode(b64u.dec(t.slice(4))));
+  return decodeFlowBody(JSON.parse(t));
+}
+const slim=r=>Object.fromEntries(Object.entries(r).filter(([k,v])=>v!==''&&v!=null));
+async function buildChunks(recs,master){
+  const out=[]; let cur=[];
+  const pack=async(rs,m)=>packText({app:'service-report',ver:1,from:'forms',records:rs.map(slim),...(m?{master:m}:{})});
+  let first=true;
+  for(const r of recs){
+    const test=await pack([...cur,r],first?master:null);
+    if(test.length>CHUNK_MAX&&cur.length){out.push(await pack(cur,first?master:null));first=false;cur=[r]}else cur.push(r);
+  }
+  if(cur.length||(first&&master)) out.push(await pack(cur,first?master:null));
+  return out;
+}
+function unsentRecs(){const t=+localStorage.getItem(SENT_KEY)||0;return DB.records.filter(r=>(r.updatedAt||0)>t)}
+function updUpBtn(){
+  const b=document.getElementById('upBtn'); if(!b) return;
+  if(!formUrl()){b.style.display='none';return}
+  const n=unsentRecs().length; b.style.display='';
+  b.textContent=formQueue.length?`📤 上傳下一批（剩 ${formQueue.length}）`:(n?`📤 上傳（${n} 筆）`:'📤 已全部上傳');
+  setSt(formQueue.length?`還有 ${formQueue.length} 批要上傳：請按「📤 上傳下一批」`:(n?`有 ${n} 筆尚未上傳`:'Forms 上傳模式 · 全部已送出'),n||formQueue.length?'#FFAB91':'#A5D6A7');
+}
+function openForm(win,text){
+  const f=parseFormUrl(formUrl()); const url=f.base+'&'+f.key+'='+encodeURIComponent(text);
+  if(win&&!win.closed) win.location.href=url; else window.open(url,'svc_upload');
+}
+async function uploadClick(){
+  if(!formUrl()) return;
+  const win=window.open('about:blank','svc_upload');
+  if(!formQueue.length){
+    const recs=unsentRecs(), t0=Date.now();
+    const master=(M().updatedAt||0)>(+localStorage.getItem(SENT_KEY)||0)?M():null;
+    if(!recs.length&&!master){if(win)win.close();updUpBtn();return}
+    formQueue=await buildChunks(recs,master);
+    localStorage.setItem(SENT_KEY,String(t0));
+  }
+  openForm(win,formQueue.shift()); updUpBtn();
+}
+async function resendDays(n){
+  if(!formUrl()){alert('請先啟用 Forms 上傳模式');return}
+  const d=new Date();d.setDate(d.getDate()-(n-1));const from=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const win=window.open('about:blank','svc_upload');
+  formQueue=await buildChunks(DB.records.filter(r=>r.date>=from),null);
+  if(!formQueue.length){if(win)win.close();alert('這段期間沒有紀錄');return}
+  openForm(win,formQueue.shift()); updUpBtn(); closeAdmin();
+}
+function enableFormMode(){
+  const u=document.getElementById('formUrl').value.trim()||M().formUrl||'';
+  if(!parseFormUrl(u)){alert('網址裡找不到預先填入的題目代碼（&r…=TEST），請重新產生預先填寫的 URL');return}
+  localStorage.setItem(FORM_KEY,u);
+  if(!localStorage.getItem(SENT_KEY)) localStorage.setItem(SENT_KEY,'0');
+  showFileName(); updUpBtn(); alert('已啟用：這台電腦存檔後會開啟 Forms，請記得按「提交」。');
+}
+function disableFormMode(){localStorage.removeItem(FORM_KEY);formQueue=[];showFileName();updUpBtn();setSt('已停用 Forms 上傳模式')}
+// ── 設定連結（手機／新裝置）──
+const ME_KEY='svc_report_me', HOST_KEY='svc_report_host';
+const myName=()=>{const m=localStorage.getItem(ME_KEY)||'';return M().staff.includes(m)?m:''};
+function askMe(){document.getElementById('meChips').innerHTML=M().staff.map(s=>`<button class="chip" style="font-size:15px;padding:8px 16px" onclick="setMe(this.dataset.v)" data-v="${esc(s)}">${esc(s)}</button>`).join('')||'<span class="hint">主檔還沒有人員，請先套用設定連結</span>';
+  document.getElementById('meDlg').classList.add('on')}
+function setMe(n){localStorage.setItem(ME_KEY,n);document.getElementById('meDlg').classList.remove('on');
+  ['ws','fs'].forEach(k=>{if(!FORM[k].id){FORM[k].staff=n;paintChips(k)}});showFileName()}
+async function makeCfgLink(){
+  const host=document.getElementById('hostUrl').value.trim(), fu=document.getElementById('cfgFormUrl').value.trim();
+  if(!/^https:\/\//.test(host)){alert('請先填手機版網址（https:// 開頭）');return}
+  if(!parseFormUrl(fu)){alert('Forms 網址格式不對：要用「取得預先填寫的 URL」產生、資料欄填 TEST 的那串網址');return}
+  localStorage.setItem(HOST_KEY,host);
+  if(M().formUrl!==fu){DB.master={...M(),formUrl:fu,updatedAt:Date.now()};persist();autoSync()}
+  const code=await packText({app:'service-report',cfg:1,master:M()});
+  const link=host.replace(/#.*$/,'')+'#cfg='+code;
+  document.getElementById('cfgOut').value=link;
+  document.getElementById('cfgInfo').textContent=`長度 ${link.length} 字元 · 人員 ${M().staff.length}、客戶 ${M().customers.length}、機種 ${M().models.length}`;
+}
+function copyCfg(){const t=document.getElementById('cfgOut');t.select();navigator.clipboard?navigator.clipboard.writeText(t.value):document.execCommand('copy')}
+async function applyCfgText(t){
+  t=(t||'').trim(); const m=t.match(/#cfg=([^&\s]+)/); const code=m?decodeURIComponent(m[1]):t;
+  try{
+    const c=await unpackText(code); if(!c||c.app!=='service-report'||!c.master||!c.master.staff) throw new Error('不是報工設定碼');
+    DB.master=fixMaster({...c.master}); persist();
+    if(c.master.formUrl&&parseFormUrl(c.master.formUrl)){localStorage.setItem(FORM_KEY,c.master.formUrl);if(!localStorage.getItem(SENT_KEY))localStorage.setItem(SENT_KEY,'0')}
+    ['ws','fs'].forEach(k=>{FORM[k]=blankForm(k)}); renderAll(true); updUpBtn(); showFileName(); closeAdmin();
+    if(!myName()) askMe(); else alert('✔ 主檔已更新');
+    return true;
+  }catch(e){alert('設定碼無法使用：'+e.message);return false}
+}
+// ── 有帳號的電腦：收件匣資料夾 ──
+async function pickInbox(){
+  if(!('showDirectoryPicker' in window)){alert('請用電腦版 Chrome 或 Edge');return}
+  try{const d=await showDirectoryPicker({mode:'readwrite'}); await IDB.set('inbox',d); showFileName(); await syncNow(true)}
+  catch(e){if(e.name!=='AbortError')alert('設定失敗：'+e.message)}
+}
+async function forgetInbox(){await IDB.del('inbox');showFileName()}
+async function readInbox(interactive){
+  const d=await IDB.get('inbox').catch(()=>null); if(!d) return {items:[],dir:null};
+  let p=await d.queryPermission({mode:'readwrite'});
+  if(p!=='granted'){if(!interactive) return {items:[],dir:null}; p=await d.requestPermission({mode:'readwrite'}); if(p!=='granted') return {items:[],dir:null}}
+  const items=[];
+  for await (const [name,h] of d.entries()){
+    if(h.kind!=='file'||!name.toLowerCase().endsWith('.json')) continue;
+    try{const j=await unpackText(await (await h.getFile()).text()); if(j&&j.app==='service-report') items.push({name,data:j})}catch(e){}
+  }
+  return {items,dir:d};
+}
+function autoSync(){syncNow(false)}
+setInterval(autoSync,120000);
+
+// ═══ 主檔視窗 ═══
+function openAdmin(){
+  const m=M();
+  document.getElementById('mStaff').value=m.staff.join('\n');
+  document.getElementById('mType').value=m.types.join('\n');
+  document.getElementById('mStation').value=m.stations.join('\n');
+  document.getElementById('mCust').value=m.customers.join('\n');
+  document.getElementById('mModel').value=(m.models||[]).join('\n');
+  document.getElementById('mSvc').value=(m.services||[]).join('\n');
+  [['tAll','全天'],['tAm','上午'],['tPm','下午']].forEach(([id,k])=>{document.getElementById(id+'S').value=m.shifts[k][0];document.getElementById(id+'E').value=m.shifts[k][1]});
+  document.getElementById('tLuS').value=m.lunch[0];document.getElementById('tLuE').value=m.lunch[1];
+  document.getElementById('dataInfo').textContent=`本機共 ${live().length} 筆有效紀錄（含已刪除標記 ${DB.records.length} 筆）`;
+  showFileName(); document.getElementById('adm').classList.add('on');
+}
+function closeAdmin(){document.getElementById('adm').classList.remove('on')}
+function mTab(t){document.querySelectorAll('.mtab').forEach(b=>b.classList.toggle('on',b.dataset.m===t));
+  document.querySelectorAll('.mp').forEach(p=>p.classList.toggle('on',p.id==='m-'+t))}
+function saveAdmin(){
+  const lines=id=>[...new Set(document.getElementById(id).value.split('\n').map(s=>s.trim()).filter(Boolean))];
+  const staff=lines('mStaff'),types=lines('mType'),stations=lines('mStation'),customers=lines('mCust'),models=lines('mModel'),services=lines('mSvc');
+  if(!services.length){alert('服務項目不能是空的');return}
+  if(!staff.length||!stations.length){alert('人員和站別不能是空的');return}
+  const tc=types.map(code);
+  if(!tc.includes('WS')||!tc.includes('FS')){alert('工作類型必須保留 WS 和 FS 兩個代碼');return}
+  const t={};for(const id of ['tAllS','tAllE','tAmS','tAmE','tPmS','tPmE','tLuS','tLuE']){const n=normTime(document.getElementById(id).value);if(!n){alert('時間格式錯誤，請用 08:30 這種格式');return}t[id]=n}
+  DB.master={...M(),staff,types,stations,customers,models,services,shifts:{'全天':[t.tAllS,t.tAllE],'上午':[t.tAmS,t.tAmE],'下午':[t.tPmS,t.tPmE]},lunch:[t.tLuS,t.tLuE],updatedAt:Date.now()};
+  persist(); closeAdmin(); renderAll(true); autoSync();
+}
+function downloadJSON(){download(JSON.stringify(DB,null,1),`報工備份_${today()}.json`,'application/json')}
+function importJSON(inp){
+  const f=inp.files[0]; if(!f) return;
+  f.text().then(t=>{const d=JSON.parse(t);if(d.app!=='service-report')throw new Error('不是報工資料檔');
+    const before=live().length; DB=mergeDB(DB,d); persist(); renderAll(true);
+    alert(`已合併匯入，有效紀錄 ${before} → ${live().length} 筆`); autoSync()}).catch(e=>alert('匯入失敗：'+e.message));
+  inp.value='';
+}
+function clearLocal(){if(!confirm('確定清除這台電腦的報工資料？（共用檔不受影響）'))return;
+  localStorage.removeItem(LS_KEY);DB=loadDB();renderAll(true);closeAdmin()}
+function loadSample(){
+  if(!confirm('加入幾筆範例資料（備註標示「範例」）供測試？之後可用編輯刪除。'))return;
+  const d=today(),now=Date.now(),mk=(o)=>({id:uid(),createdAt:now,updatedAt:now,shift:'',wo:'',station:'',cust:'',travel:'',note:'範例',...o});
+  const S=M().staff.length?M().staff:['人員A','人員B','人員C'], P=i=>S[i%S.length];
+  DB.records.push(
+    mk({kind:'WS',date:d,staff:P(0),type:'WS 工單維修',shift:'上午',start:'08:30',end:'12:00',wo:'WO0000000000001',station:'檢整組裝',model:'R5',modelNo:'RA0100F'}),
+    mk({kind:'WS',date:d,staff:P(1),type:'WS 工單維修',start:'08:30',end:'10:50',wo:'WO0000000000002',station:'拆解檢查',model:'COBRA',modelNo:'NC0100B'}),
+    mk({kind:'WS',date:d,staff:P(1),type:'WS 工單維修',start:'10:55',end:'17:30',wo:'WO0000000000002',station:'性能測試'}),
+    mk({kind:'WS',date:d,staff:P(2),type:'5S 環境整理',shift:'下午',start:'13:00',end:'17:30'}),
+    mk({kind:'FS',date:d,staff:P(3),type:'FS 客戶現場服務',svc:'保養',start:'08:00',end:'17:30',cust:'範例客戶A',model:'Mink',modelNo:'MM1252A',travel:3}),
+    mk({kind:'FS',date:d,staff:P(4),type:'FS 客戶現場服務',svc:'檢修',shift:'全天',start:'08:30',end:'17:30',cust:'範例客戶B',model:'R5',modelNo:'RA0100F',travel:2}));
+  persist(); renderAll(true); closeAdmin(); autoSync();
+}
+
+// ═══ 共用 ═══
+function showTab(p){document.querySelectorAll('.tab[data-p]').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id==='p-'+p));
+  if(p==='board')renderBoard(); if(p==='rpt')renderReport()}
+function renderAll(full){
+  if(full){paintAllChips('ws');paintAllChips('fs')}
+  const wos=[...new Set(live().filter(r=>r.wo).sort((a,b)=>b.updatedAt-a.updatedAt).map(r=>r.wo))].slice(0,200);
+  document.getElementById('woList').innerHTML=wos.map(w=>`<option value="${esc(w)}">`).join('');
+  document.getElementById('custList').innerHTML=M().customers.map(c=>`<option value="${esc(c)}">`).join('');
+  renderList('ws');renderList('fs');renderBoard();renderReport();
+}
+document.body.insertAdjacentHTML('beforeend','<datalist id="woList"></datalist><datalist id="custList"></datalist>');
+buildPage('ws');buildPage('fs');
+document.getElementById('bDate').value=today();
+document.getElementById('rMonth').value=today().slice(0,7);
+renderAll(true);
+(async()=>{
+  if(location.hash.startsWith('#cfg=')){const h=location.hash; history.replaceState(null,'',location.pathname+location.search); await applyCfgText(h)}
+  else if(!M().staff.length&&!formUrl()&&location.protocol.startsWith('http')){openAdmin();mTab('sync');alert('第一次使用：請點同仁傳給你的「設定連結」，或在這裡貼上設定碼。')}
+})();
+if(formUrl()){updUpBtn()}
+else if(flowUrl()){setSt('網路同步模式');autoSync()}
+else IDB.get('file').then(h=>{if(h){setSt('已設定共用檔：'+h.name+'，按「🔄 同步」授權');autoSync()}}).catch(()=>{});
+</script>
+</body>
+</html>
