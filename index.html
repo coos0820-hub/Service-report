@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.7<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.8<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -376,7 +376,7 @@ function overlapWarn(r){
 // ═══ 報工輸入頁（廠內 / 廠外共用） ═══
 const FORM={ws:{},fs:{}};
 const FILTER={ws:{},fs:{}};
-const NO_CUST_SVC=['廠內作業','其他'];  // 這些服務項目：客戶選填、不記交通
+const NO_CUST_SVC=['廠內作業','其他'];  // 這些服務項目：比照廠內格式，只填人員、時間、備註
 const fsType=()=>M().types.find(t=>code(t)==='FS')||'FS 客戶現場服務';
 const wsTypes=()=>M().types.filter(t=>code(t)!=='FS');
 function blankForm(kind){
@@ -405,13 +405,13 @@ function buildPage(kind){
     <label data-show="WS,SYS,TEST">機種</label><div class="chips" id="${kind}-model" data-show="WS,SYS,TEST"></div>
     <label data-show="WS,SYS,TEST">型號</label><div class="row" data-show="WS,SYS,TEST"><input class="inp" id="${kind}-modelNo" list="mnList-${kind}" style="width:220px" placeholder="例如 RA0100F">
       <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`:`
-    <label id="${kind}-custL">客戶</label><div class="row"><input class="inp" id="${kind}-cust" list="custList" style="width:220px" placeholder="選擇或輸入客戶">
+    <label class="fsx" id="${kind}-custL">客戶</label><div class="row fsx"><input class="inp" id="${kind}-cust" list="custList" style="width:220px" placeholder="選擇或輸入客戶">
       <span class="hint">新客戶可直接輸入，常用的再到主檔新增</span></div>
-    <label id="fs-travL">交通時數</label><div class="row" id="fs-travR"><div class="chips" id="${kind}-travel"></div><input class="inp t" id="fs-travelIn" inputmode="decimal" placeholder="其他" title="其他時數，例如 5 或 6.5"><span class="hint">來回合計，小時；不在按鈕裡的直接填</span></div>
-    <label>工單號</label><div class="row"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填">
+    <label class="fsx" id="fs-travL">交通時數</label><div class="row fsx" id="fs-travR"><div class="chips" id="${kind}-travel"></div><input class="inp t" id="fs-travelIn" inputmode="decimal" placeholder="其他" title="其他時數，例如 5 或 6.5"><span class="hint">來回合計，小時；不在按鈕裡的直接填</span></div>
+    <label class="fsx">工單號</label><div class="row fsx"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填">
       <span class="hint">輸入用過的工單會自動帶出機種、型號</span></div>
-    <label>機種</label><div class="chips" id="${kind}-model"></div>
-    <label>型號</label><div class="row"><input class="inp" id="${kind}-modelNo" list="mnList-${kind}" style="width:220px" placeholder="例如 RA0100F">
+    <label class="fsx">機種</label><div class="chips fsx" id="${kind}-model"></div>
+    <label class="fsx">型號</label><div class="row fsx"><input class="inp" id="${kind}-modelNo" list="mnList-${kind}" style="width:220px" placeholder="例如 RA0100F">
       <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`}
     <label>備註</label><input class="inp" id="${kind}-note" style="width:100%;max-width:560px" placeholder="${isWS?'發現的問題、缺料、上課或支援的內容…':'服務內容、更換零件、待辦…'}">
     <label></label><div class="row">
@@ -472,8 +472,8 @@ function paintChips(kind){
   document.querySelectorAll(`#p-${kind} [data-show]`).forEach(e=>e.style.display=e.dataset.show.split(',').includes(c)?'':'none');
   if(kind==='fs'){const inPlant=NO_CUST_SVC.includes(F.svc);
     document.getElementById('fs-custL').classList.toggle('req',!inPlant);
-    document.getElementById('fs-travL').style.display=document.getElementById('fs-travR').style.display=inPlant?'none':'';
-    document.getElementById('fs-cust').placeholder=inPlant?'可不填（是替某客戶做的就填）':'選擇或輸入客戶';
+    document.querySelectorAll('#p-fs .fsx').forEach(e=>e.style.display=inPlant?'none':'');
+    document.getElementById('fs-note').placeholder=inPlant?'做了什麼（「其他」必填）':'服務內容、更換零件、待辦…';
     const ti=document.getElementById('fs-travelIn'); if(ti&&document.activeElement!==ti){const t=String(F.travel??''); ti.value=(t&&!TRAVEL_OPTS.map(String).includes(t))?t:''; ti.classList.remove('err')}}
   const mn=[...new Set(live().filter(r=>r.modelNo&&(!F.model||r.model===F.model)).map(r=>r.modelNo))].sort();
   document.getElementById('mnList-'+kind).innerHTML=mn.map(v=>`<option value="${esc(v)}">`).join('');
@@ -504,7 +504,7 @@ function saveForm(kind){
   if(kind==='fs') F.type=fsType();
   if(kind==='ws'){const c=code(F.type); if(!['WS','SYS','TEST'].includes(c)){F.wo='';F.model='';F.modelNo=''} if(c!=='WS') F.station=''}
   F.wo=(F.wo||'').trim().toUpperCase(); F.cust=(F.cust||'').trim(); F.modelNo=(F.modelNo||'').trim().toUpperCase();
-  if(kind==='fs'&&NO_CUST_SVC.includes(F.svc)) F.travel='';
+  if(kind==='fs'&&NO_CUST_SVC.includes(F.svc)){F.travel='';F.cust='';F.wo='';F.model='';F.modelNo=''}
   const rec={...F,kind:kind.toUpperCase(),travel:kind==='fs'?(F.travel===''?0:+F.travel):'',
     station:kind==='ws'?F.station:'',cust:kind==='fs'?F.cust:'',svc:code(F.type)==='FS'?F.svc:''};
   const err=checkRec(rec);
