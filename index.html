@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.5<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.7<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -283,17 +283,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 // ═══ 預設主檔 ═══
 const DEFAULT_MASTER={
   staff:[],
-  types:["WS 工單維修","FS 客戶現場服務","SYS 系統案支援","TEST 新機測試/廠驗","SUP 跨部門支援","5S 環境整理","TRN 教育訓練"],
+  types:["WS 工單維修","FS 客戶現場服務","SYS 系統案支援","TEST 新機測試/廠驗","SUP 跨部門支援","5S 環境整理","TRN 教育訓練","OTH 其他"],
   stations:["拆解檢查","噴砂清洗","檢整組裝","噴漆塗層","性能測試"],
   customers:[],
-  services:["保養","檢修","拆機","裝機"],
+  services:["保養","檢修","拆機","裝機","廠內作業","其他"],
   models:["R5","Mink","COBRA","Seco","Dolphin","Panda","Puma","Samos","Fossa","Huckepack","其他品牌"],
   shifts:{"全天":["08:30","17:30"],"上午":["08:30","12:00"],"下午":["13:00","17:30"],"加班":["18:00","20:00"]},
   breaks:{"午休":["12:00","13:00"],"晚休":["17:30","18:00"]},
   lunch:["12:00","13:00"],
   updatedAt:0
 };
-const TYPE_COLOR={WS:'#1565C0',FS:'#2E7D32',SYS:'#6A1B9A',TEST:'#00838F',SUP:'#E65100','5S':'#795548',TRN:'#AD1457'};
+const TYPE_COLOR={OTH:'#546E7A',WS:'#1565C0',FS:'#2E7D32',SYS:'#6A1B9A',TEST:'#00838F',SUP:'#E65100','5S':'#795548',TRN:'#AD1457'};
 const TRAVEL_OPTS=[0,0.5,1,1.5,2,2.5,3,4];
 const LS_KEY='svc_report_db';
 
@@ -307,6 +307,11 @@ function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.mo
   if(!m.shifts||typeof m.shifts!=='object')m.shifts=JSON.parse(JSON.stringify(DEFAULT_MASTER.shifts));
   if(!m.breaks||typeof m.breaks!=='object'){m.breaks={'午休':m.lunch||['12:00','13:00'],'晚休':['17:30','18:00']};if(!m.shifts['加班'])m.shifts['加班']=['18:00','20:00']}
   m.lunch=Object.values(m.breaks)[0]||['12:00','13:00'];
+  if(!Array.isArray(m.mig)) m.mig=[];
+  if(!m.mig.includes('v196')){ // 一次性：補「其他」「廠內作業」（之後刪掉不會再加回）
+    if(Array.isArray(m.types)&&!m.types.some(t=>String(t).split(' ')[0]==='OTH')) m.types=[...m.types,'OTH 其他'];
+    if(Array.isArray(m.services)){const sv=[...m.services]; ['廠內作業','其他'].forEach(x=>{if(!sv.includes(x))sv.push(x)}); m.services=sv}
+    m.mig=[...m.mig,'v196']}
   return m}
 // ── 主檔：逐欄位時間戳，合併時各欄位取較新者（避免空白主檔蓋掉人員清單）──
 const MF=['staff','types','stations','customers','services','models','shifts','breaks','formUrl','adminHash'];
@@ -357,7 +362,8 @@ function checkRec(r){
   const h=hoursOf(r); if(h<=0) return '結束要晚於開始';
   if(code(r.type)==='WS'&&!r.station) return '工單維修要選站別';
   if(code(r.type)==='FS'&&!r.svc) return '客戶現場服務要選服務項目';
-  if(code(r.type)==='FS'&&!r.cust) return '客戶現場服務要選客戶';
+  if(code(r.type)==='FS'&&!r.cust&&!NO_CUST_SVC.includes(r.svc)) return '客戶現場服務要選客戶';
+  if((code(r.type)==='OTH'||(code(r.type)==='FS'&&r.svc==='其他'))&&!String(r.note||'').trim()) return '選「其他」請在備註寫明做什麼';
   if(r.kind==='FS'&&+r.travel>=h) return '交通時數不能大於等於總工時';
   return '';
 }
@@ -370,6 +376,7 @@ function overlapWarn(r){
 // ═══ 報工輸入頁（廠內 / 廠外共用） ═══
 const FORM={ws:{},fs:{}};
 const FILTER={ws:{},fs:{}};
+const NO_CUST_SVC=['廠內作業','其他'];  // 這些服務項目：客戶選填、不記交通
 const fsType=()=>M().types.find(t=>code(t)==='FS')||'FS 客戶現場服務';
 const wsTypes=()=>M().types.filter(t=>code(t)!=='FS');
 function blankForm(kind){
@@ -400,7 +407,7 @@ function buildPage(kind){
       <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`:`
     <label id="${kind}-custL">客戶</label><div class="row"><input class="inp" id="${kind}-cust" list="custList" style="width:220px" placeholder="選擇或輸入客戶">
       <span class="hint">新客戶可直接輸入，常用的再到主檔新增</span></div>
-    <label>交通時數</label><div class="row"><div class="chips" id="${kind}-travel"></div><input class="inp t" id="fs-travelIn" inputmode="decimal" placeholder="其他" title="其他時數，例如 5 或 6.5"><span class="hint">來回合計，小時；不在按鈕裡的直接填</span></div>
+    <label id="fs-travL">交通時數</label><div class="row" id="fs-travR"><div class="chips" id="${kind}-travel"></div><input class="inp t" id="fs-travelIn" inputmode="decimal" placeholder="其他" title="其他時數，例如 5 或 6.5"><span class="hint">來回合計，小時；不在按鈕裡的直接填</span></div>
     <label>工單號</label><div class="row"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填">
       <span class="hint">輸入用過的工單會自動帶出機種、型號</span></div>
     <label>機種</label><div class="chips" id="${kind}-model"></div>
@@ -463,7 +470,10 @@ function paintChips(kind){
   ['date','start','end','wo','cust','modelNo','note'].forEach(f=>{const i=document.getElementById(kind+'-'+f);if(i&&document.activeElement!==i)i.value=F[f]||''});
   const c=code(F.type);
   document.querySelectorAll(`#p-${kind} [data-show]`).forEach(e=>e.style.display=e.dataset.show.split(',').includes(c)?'':'none');
-  if(kind==='fs'){document.getElementById('fs-custL').classList.add('req');
+  if(kind==='fs'){const inPlant=NO_CUST_SVC.includes(F.svc);
+    document.getElementById('fs-custL').classList.toggle('req',!inPlant);
+    document.getElementById('fs-travL').style.display=document.getElementById('fs-travR').style.display=inPlant?'none':'';
+    document.getElementById('fs-cust').placeholder=inPlant?'可不填（是替某客戶做的就填）':'選擇或輸入客戶';
     const ti=document.getElementById('fs-travelIn'); if(ti&&document.activeElement!==ti){const t=String(F.travel??''); ti.value=(t&&!TRAVEL_OPTS.map(String).includes(t))?t:''; ti.classList.remove('err')}}
   const mn=[...new Set(live().filter(r=>r.modelNo&&(!F.model||r.model===F.model)).map(r=>r.modelNo))].sort();
   document.getElementById('mnList-'+kind).innerHTML=mn.map(v=>`<option value="${esc(v)}">`).join('');
@@ -494,6 +504,7 @@ function saveForm(kind){
   if(kind==='fs') F.type=fsType();
   if(kind==='ws'){const c=code(F.type); if(!['WS','SYS','TEST'].includes(c)){F.wo='';F.model='';F.modelNo=''} if(c!=='WS') F.station=''}
   F.wo=(F.wo||'').trim().toUpperCase(); F.cust=(F.cust||'').trim(); F.modelNo=(F.modelNo||'').trim().toUpperCase();
+  if(kind==='fs'&&NO_CUST_SVC.includes(F.svc)) F.travel='';
   const rec={...F,kind:kind.toUpperCase(),travel:kind==='fs'?(F.travel===''?0:+F.travel):'',
     station:kind==='ws'?F.station:'',cust:kind==='fs'?F.cust:'',svc:code(F.type)==='FS'?F.svc:''};
   const err=checkRec(rec);
@@ -621,7 +632,7 @@ function renderReport(){
   h+=`</table></div><div class="hint" style="margin-top:4px">平均每工單 h = 有填工單號的工時 ÷ 工單數。工單只要有一筆填了機種、型號，同工單的其他筆會自動歸到同一機種。沒填工單也沒填機種的紀錄（例如 5S、教育訓練）不列入本表。</div>`;
   // 客戶（含服務項目拆分）
   const SV=M().services, fsc=recs.filter(r=>code(r.type)==='FS');
-  const cs={};fs.forEach(r=>{const k=r.cust||'(未填)';(cs[k]=cs[k]||[]).push(r)});
+  const cs={};fs.forEach(r=>{const k=r.cust||(NO_CUST_SVC.includes(r.svc)?`（${r.svc}）`:'(未填)');(cs[k]=cs[k]||[]).push(r)});
   h+=`<h3 style="font-size:13px;margin:16px 0 6px">④ 廠外客戶別</h3><div class="tw"><table class="dt"><tr><th>客戶</th><th class="n">人次</th>${SV.map(v=>`<th class="n">${esc(v)} h</th>`).join('')}<th class="n">其他 h</th><th class="n">現場 h</th><th class="n">交通 h</th><th class="n">合計 h</th><th class="n">平均每人次 h</th></tr>`;
   const cRows=Object.entries(cs).map(([c,rs])=>{const t=sum(rs),tr=rs.reduce((a,r)=>a+(+r.travel||0),0);return {c,rs,n:rs.length,t,tr}}).sort((a,b)=>b.t-a.t);
   if(!cRows.length) h+=`<tr><td colspan="${SV.length+8}" class="empty">本月沒有廠外紀錄</td></tr>`;
@@ -879,6 +890,13 @@ async function applyCfgText(t,fromWizard){
 function cfgFail(msg,fromWizard){if(fromWizard){showWizard('member',msg)}else alert('設定失敗：'+msg);return false}
 // ── 第一次使用引導 ──
 let wizAfterMe=false;
+const isIOS=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const HOME_STEPS={
+  ios:`<ol><li>確認是用 <b>Safari</b> 開啟（不是在 LINE 等通訊軟體裡）</li><li>點下方工具列中間的「<b>分享</b>」圖示（方框加向上箭頭 ⬆）</li><li>往下滑，點「<b>加入主畫面</b>」</li><li>右上角點「<b>新增</b>」，桌面就會出現「報工系統」</li></ol><div class="hint">看不到工具列：點一下畫面最下方，或往上滑一下。</div>`,
+  android:`<ol><li>確認是用 <b>Chrome</b> 開啟（不是在 LINE 等通訊軟體裡）</li><li>點右上角「<b>⋮</b>」</li><li>點「<b>加到主畫面</b>」或「<b>安裝應用程式</b>」</li><li>點「<b>新增</b>」（或「安裝」），桌面就會出現「報工系統」</li></ol><div class="hint">三星內建瀏覽器：下方「≡」→「新增頁面至」→「主畫面」。</div>`};
+function homeHTML(){const os=isIOS()?'ios':'android';
+  return `<div class="row" style="gap:6px;margin-bottom:4px"><button class="chip ${os==='ios'?'on':''}" id="hmIos" onclick="homeOS('ios')">iPhone</button><button class="chip ${os==='android'?'on':''}" id="hmAnd" onclick="homeOS('android')">Android</button><span class="hint">已自動選擇你的手機，不對可切換</span></div><div id="hmSteps">${HOME_STEPS[os]}</div>`}
+function homeOS(os){document.getElementById('hmIos').classList.toggle('on',os==='ios');document.getElementById('hmAnd').classList.toggle('on',os==='android');document.getElementById('hmSteps').innerHTML=HOME_STEPS[os]}
 const isPhone=()=>!('showOpenFilePicker' in window);
 const inApp=()=>/\bLine\/|FBAN|FBAV|Instagram|MicroMessenger|WhatsApp|Teams\/|KAKAOTALK|; wv\)/i.test(navigator.userAgent);
 function closeWizard(){document.getElementById('wiz').classList.remove('on')}
@@ -916,13 +934,16 @@ function showWizard(step,err){
   else if(step==='done'){T.textContent='✔ 設定完成';
     B.innerHTML=`${inApp()?`<div class="err" style="margin:0 0 12px">⚠ 目前在通訊軟體裡面。請點「⋯」→「以預設瀏覽器開啟」，在 Safari／Chrome 再點一次設定連結，之後才能加到主畫面。</div>`:''}<div class="ok">你好，${esc(myName()||'同仁')}！之後打開就能直接報工。</div>
       <h4 style="margin-top:14px">報工三步驟</h4><ol><li>選服務項目或工作類型、時間、客戶……</li><li>按「＋ 新增」</li><li>跳出表單後按「<b>提交</b>」（這一步才算送出）</li></ol>
-      <h4 style="margin-top:10px">放到手機桌面（建議）</h4><ol><li>iPhone（Safari）：下方「分享」→「加入主畫面」</li><li>Android（Chrome）：右上「⋮」→「加到主畫面」</li></ol>
+      <h4 style="margin-top:10px">放到手機桌面（建議）</h4>${homeHTML()}
       <button class="btn btn-p" style="margin-top:8px" onclick="closeWizard();showTab(isPhone()?'fs':'ws')">開始使用</button>`}
+  else if(step==='home2'){T.textContent='放到手機桌面';
+    B.innerHTML=`${homeHTML()}<button class="btn btn-o btn-s" style="margin-top:10px" onclick="showWizard('help')">← 返回</button>`}
   else if(step==='help'){T.textContent='使用說明與問題排除';
     B.innerHTML=`<h4>常見狀況</h4><ol>
       <li><b>按新增後沒跳出表單</b>：畫面下方會出現紫色按鈕「開啟上傳表單」，點它再按「提交」。</li>
       <li><b>忘了按提交</b>：右上角「📤 上傳」會顯示未送出筆數，點一下補送；重複送不會變成兩筆。</li>
       <li><b>每次打開都要重新設定</b>：之前是在通訊軟體裡開的。點設定連結後選「以預設瀏覽器開啟」，再加到主畫面。</li>
+      <li><b>想放到手機桌面</b>：<button class="lnk" onclick="showWizard('home2')">看步驟</button></li>
       <li><b>名字選錯</b>：按下面的「變更使用者」。</li>
       <li><b>人員、客戶清單不對或缺人</b>：請管理者重傳新的設定連結，點開即更新。</li>
       <li><b>畫面怪怪的、怎麼弄都不對</b>：用下面的「重新設定」，報工紀錄會保留。</li></ol>
