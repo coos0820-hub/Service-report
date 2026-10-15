@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Service 報工系統 | Service Time Reporting</title>
+<title>報工系統 | Service Time Reporting</title>
 <style>
 :root{--navy:#0D1B2A;--navy2:#1B2D44;--blue:#1565C0;--blue2:#1976D2;
   --red:#B71C1C;--red2:#E53935;--orange:#E65100;--green:#1B5E20;--green2:#2E7D32;
@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>Service 報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.4<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.5<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -253,7 +253,7 @@ body.station .notstation{display:none!important}
 </div>
 
 <div class="mbg" id="wiz"><div class="modal" style="width:min(520px,100%)">
-  <div class="mhd"><h3 id="wzTitle">歡迎使用 Service 報工</h3><button class="ib" style="color:#fff;font-size:18px" onclick="closeWizard()">✕</button></div>
+  <div class="mhd"><h3 id="wzTitle">歡迎使用報工系統</h3><button class="ib" style="color:#fff;font-size:18px" onclick="closeWizard()">✕</button></div>
   <div class="wz" id="wzBody"></div></div></div>
 <div id="upFallback"><b>📤 還差一步：送出報工</b><div style="font-size:12.5px;opacity:.9;margin-top:3px">瀏覽器擋住了自動開啟，請點下方按鈕開啟表單，再按「提交」。</div>
   <a id="upFallbackA" href="#" target="_blank" rel="noopener" onclick="formQueue.shift();updUpBtn();setTimeout(()=>document.getElementById('upFallback').style.display='none',300)">開啟上傳表單</a></div>
@@ -858,7 +858,7 @@ function qrCanvas(px){const n=qrObj.getModuleCount(),m=4,c=document.createElemen
   for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(qrObj.isDark(r,k))g.fillRect((k+m)*cell,(r+m)*cell,cell,cell); return c}
 function dlQR(){if(!qrObj)return; const a=document.createElement('a'); a.href=qrCanvas(1200).toDataURL('image/png'); a.download=`報工設定QR_${today()}.png`; a.click()}
 function printQR(){if(!qrObj)return; const w=window.open('','_blank'); if(!w){alert('請允許彈出視窗後再按一次');return}
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>報工設定 QR Code</title><body style="text-align:center;font-family:sans-serif;margin-top:30px"><h2>Service 報工系統　手機設定</h2><img src="${qrCanvas(1200).toDataURL('image/png')}" style="width:9cm;height:9cm"><p>手機相機掃描 → 點連結 → 用 Safari／Chrome 開啟</p><p style="color:#888;font-size:12px">${today()} 產生 · 限公司內部使用</p></body>`);
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>報工設定 QR Code</title><body style="text-align:center;font-family:sans-serif;margin-top:30px"><h2>報工系統　手機設定</h2><img src="${qrCanvas(1200).toDataURL('image/png')}" style="width:9cm;height:9cm"><p>手機相機掃描 → 點連結 → 用 Safari／Chrome 開啟</p><p style="color:#888;font-size:12px">${today()} 產生 · 限公司內部使用</p></body>`);
   w.document.close(); setTimeout(()=>w.print(),400)}
 function copyCfg(){const t=document.getElementById('cfgOut');t.select();navigator.clipboard?navigator.clipboard.writeText(t.value):document.execCommand('copy')}
 async function applyCfgText(t,fromWizard){
@@ -886,7 +886,7 @@ function showWizard(step,err){
   const T=document.getElementById('wzTitle'),B=document.getElementById('wzBody');
   const E=err?`<div class="err">⚠ ${esc(err)}</div>`:'';
   if(step==='home'&&isPhone()) step='member';
-  if(step==='home'){T.textContent='歡迎使用 Service 報工';
+  if(step==='home'){T.textContent='歡迎使用報工系統';
     B.innerHTML=`<h4>這台裝置是？</h4>
       <button class="bigbtn" onclick="showWizard('member')"><span class="ic">📱</span><span>同仁的手機<small>用管理者傳來的「設定連結」完成設定</small></span></button>
       <button class="bigbtn" onclick="showWizard('station')"><span class="ic">🏭</span><span>廠內報工電腦（連 NAS）<small>大家共用，直接寫入 NAS 共用檔</small></span></button>
