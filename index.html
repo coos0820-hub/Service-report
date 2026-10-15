@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>Service 報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.1<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>Service 報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.2<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -168,7 +168,8 @@ body.station .notstation{display:none!important}
     <button class="mtab" data-m="data" onclick="mTab('data')">資料備份</button>
   </div>
   <div class="mp on" id="m-list">
-    <div class="hint" style="margin-bottom:10px">每行一個項目，順序就是畫面上的順序。工作類型格式為「代碼 名稱」，WS（工單維修）和 FS（客戶現場服務）兩個代碼請保留。</div>
+    <div class="hint" style="margin-bottom:10px">每行一個項目，順序就是畫面上的順序。工作類型格式為「代碼 名稱」，WS（工單維修）和 FS（客戶現場服務）兩個代碼請保留。
+      <button class="btn btn-o btn-s" style="margin-left:6px" onclick="fillFromRecords()">↺ 從報工紀錄帶入人員／客戶／機種</button></div>
     <div class="mgrid">
       <div><label>人員</label><textarea class="ta" id="mStaff"></textarea></div>
       <div><label>工作類型</label><textarea class="ta" id="mType"></textarea></div>
@@ -179,13 +180,11 @@ body.station .notstation{display:none!important}
     </div>
   </div>
   <div class="mp" id="m-time">
-    <div class="hint" style="margin-bottom:10px">點選時段按鈕會自動帶入這裡的時間；跨午休自動扣除。</div>
-    <table class="dt" style="max-width:420px"><tr><th>時段</th><th>開始</th><th>結束</th></tr>
-      <tr><td>全天</td><td><input class="inp t" id="tAllS"></td><td><input class="inp t" id="tAllE"></td></tr>
-      <tr><td>上午</td><td><input class="inp t" id="tAmS"></td><td><input class="inp t" id="tAmE"></td></tr>
-      <tr><td>下午</td><td><input class="inp t" id="tPmS"></td><td><input class="inp t" id="tPmE"></td></tr>
-      <tr><td>午休</td><td><input class="inp t" id="tLuS"></td><td><input class="inp t" id="tLuE"></td></tr>
-    </table>
+    <div class="hint" style="margin-bottom:10px">點選時段按鈕會自動帶入這裡的時間；報工時間跨到休息時間會自動扣除。名稱可以改，可新增或刪除（「上午」「下午」用於今日看板，建議保留）。</div>
+    <h4 style="margin:4px 0 6px;font-size:14px">⏱ 時段按鈕</h4><table class="dt" style="max-width:520px" id="tShift"></table>
+    <button class="btn btn-o btn-s" style="margin-top:6px" onclick="addTRow('tShift')">＋ 新增時段</button>
+    <h4 style="margin:16px 0 6px;font-size:14px">☕ 休息時間（工時自動扣除）</h4><table class="dt" style="max-width:520px" id="tBreak"></table>
+    <button class="btn btn-o btn-s" style="margin-top:6px" onclick="addTRow('tBreak')">＋ 新增休息</button>
   </div>
   <div class="mp" id="m-sync">
     <div class="box">
@@ -279,7 +278,8 @@ const DEFAULT_MASTER={
   customers:[],
   services:["保養","檢修","拆機","裝機"],
   models:["R5","Mink","COBRA","Seco","Dolphin","Panda","Puma","Samos","Fossa","Huckepack","其他品牌"],
-  shifts:{"全天":["08:30","17:30"],"上午":["08:30","12:00"],"下午":["13:00","17:30"]},
+  shifts:{"全天":["08:30","17:30"],"上午":["08:30","12:00"],"下午":["13:00","17:30"],"加班":["18:00","20:00"]},
+  breaks:{"午休":["12:00","13:00"],"晚休":["17:30","18:00"]},
   lunch:["12:00","13:00"],
   updatedAt:0
 };
@@ -293,7 +293,23 @@ function loadDB(){
   try{const d=JSON.parse(localStorage.getItem(LS_KEY));if(d&&d.records&&d.master)return d}catch(e){}
   return {app:'service-report',ver:1,records:[],master:JSON.parse(JSON.stringify(DEFAULT_MASTER))};
 }
-function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.models];if(!Array.isArray(m.services))m.services=[...DEFAULT_MASTER.services];return m}
+function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.models];if(!Array.isArray(m.services))m.services=[...DEFAULT_MASTER.services];
+  if(!m.shifts||typeof m.shifts!=='object')m.shifts=JSON.parse(JSON.stringify(DEFAULT_MASTER.shifts));
+  if(!m.breaks||typeof m.breaks!=='object'){m.breaks={'午休':m.lunch||['12:00','13:00'],'晚休':['17:30','18:00']};if(!m.shifts['加班'])m.shifts['加班']=['18:00','20:00']}
+  m.lunch=Object.values(m.breaks)[0]||['12:00','13:00'];
+  return m}
+// ── 主檔：逐欄位時間戳，合併時各欄位取較新者（避免空白主檔蓋掉人員清單）──
+const MF=['staff','types','stations','customers','services','models','shifts','breaks','formUrl','adminHash'];
+const fts=(m,k)=>!m?0:(m.fts&&typeof m.fts==='object')?(+m.fts[k]||0):(m.updatedAt||0);
+function setMaster(ch){const now=Date.now(),m={...M(),fts:{}}; for(const k of MF) m.fts[k]=fts(M(),k);
+  for(const k in ch){if(JSON.stringify(m[k]??'')!==JSON.stringify(ch[k]??'')){m[k]=ch[k];m.fts[k]=now}}
+  m.updatedAt=now; DB.master=fixMaster(m); persist()}
+function mergeMaster(a,b){
+  if(!b||typeof b!=='object') return a; b=fixMaster(JSON.parse(JSON.stringify(b))); if(!a) return b; a=fixMaster(a);
+  const r={...a,fts:{}};
+  for(const k of MF){const ta=fts(a,k),tb=fts(b,k); if(tb>ta&&b[k]!==undefined){r[k]=b[k];r.fts[k]=tb}else{r.fts[k]=ta;if(a[k]===undefined&&b[k]!==undefined&&tb>=ta)r[k]=b[k]}}
+  r.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
+  return fixMaster(r)}
 fixMaster(DB.master);
 function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(DB))}catch(e){alert('本機儲存失敗：'+e.message)}}
 const M=()=>DB.master;
@@ -318,9 +334,8 @@ function normTime(v){
 const toMin=t=>{if(!t)return null;const[a,b]=t.split(':');return +a*60+ +b};
 function hoursOf(r){
   const s=toMin(r.start),e=toMin(r.end); if(s==null||e==null) return 0;
-  const ls=toMin(M().lunch[0]),le=toMin(M().lunch[1]);
-  const lunch=Math.max(0,Math.min(e,le)-Math.max(s,ls));
-  return Math.round((e-s-lunch)/6)/10;
+  let rest=0; for(const [bs,be] of Object.values(M().breaks||{'午休':M().lunch})){const a=toMin(bs),b=toMin(be); if(a!=null&&b!=null) rest+=Math.max(0,Math.min(e,b)-Math.max(s,a))}
+  return Math.round((e-s-rest)/6)/10;
 }
 function checkRec(r){
   if(!r.date) return '缺日期'; if(!r.staff) return '缺人員'; if(!r.type) return '缺工作類型';
@@ -371,7 +386,7 @@ function buildPage(kind){
       <span class="hint">直接輸入；選了機種會提示用過的型號</span></div>`:`
     <label id="${kind}-custL">客戶</label><div class="row"><input class="inp" id="${kind}-cust" list="custList" style="width:220px" placeholder="選擇或輸入客戶">
       <span class="hint">新客戶可直接輸入，常用的再到主檔新增</span></div>
-    <label>交通時數</label><div class="row"><div class="chips" id="${kind}-travel"></div><span class="hint">來回合計，小時</span></div>
+    <label>交通時數</label><div class="row"><div class="chips" id="${kind}-travel"></div><input class="inp t" id="fs-travelIn" inputmode="decimal" placeholder="其他" title="其他時數，例如 5 或 6.5"><span class="hint">來回合計，小時；不在按鈕裡的直接填</span></div>
     <label>工單號</label><div class="row"><input class="inp" id="${kind}-wo" list="woList" style="width:220px" placeholder="有工單才填">
       <span class="hint">輸入用過的工單會自動帶出機種、型號</span></div>
     <label>機種</label><div class="chips" id="${kind}-model"></div>
@@ -399,6 +414,11 @@ function buildPage(kind){
       if(n===null){i.classList.add('err');return} i.classList.remove('err'); i.value=n; FORM[kind][f]=n; matchShift(kind); updCalc(kind)});
     i.addEventListener('keydown',e=>{if(e.key==='Enter'){i.blur();saveForm(kind)}});
   });
+  const ti=document.getElementById('fs-travelIn');
+  if(ti&&kind==='fs'){ti.addEventListener('input',()=>{const v=ti.value.trim();
+      if(v===''){FORM.fs.travel='';ti.classList.remove('err')}else if(/^\d+(\.\d+)?$/.test(v)&&+v<24){FORM.fs.travel=String(+v);ti.classList.remove('err')}else{ti.classList.add('err');return}
+      paintChips('fs')});
+    ti.addEventListener('keydown',e=>{if(e.key==='Enter'){ti.blur();saveForm('fs')}})}
   const d=new Date(); d.setDate(d.getDate()-13);
   document.getElementById(kind+'-f1').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   document.getElementById(kind+'-f2').value=today();
@@ -429,7 +449,8 @@ function paintChips(kind){
   ['date','start','end','wo','cust','modelNo','note'].forEach(f=>{const i=document.getElementById(kind+'-'+f);if(i&&document.activeElement!==i)i.value=F[f]||''});
   const c=code(F.type);
   document.querySelectorAll(`#p-${kind} [data-show]`).forEach(e=>e.style.display=e.dataset.show.split(',').includes(c)?'':'none');
-  if(kind==='fs') document.getElementById('fs-custL').classList.add('req');
+  if(kind==='fs'){document.getElementById('fs-custL').classList.add('req');
+    const ti=document.getElementById('fs-travelIn'); if(ti&&document.activeElement!==ti){const t=String(F.travel??''); ti.value=(t&&!TRAVEL_OPTS.map(String).includes(t))?t:''; ti.classList.remove('err')}}
   const mn=[...new Set(live().filter(r=>r.modelNo&&(!F.model||r.model===F.model)).map(r=>r.modelNo))].sort();
   document.getElementById('mnList-'+kind).innerHTML=mn.map(v=>`<option value="${esc(v)}">`).join('');
   updCalc(kind);
@@ -516,7 +537,7 @@ function bShift(n){const i=document.getElementById('bDate');const d=new Date(i.v
   i.value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());renderBoard()}
 function renderBoard(){
   const date=document.getElementById('bDate').value||today();
-  const am=M().shifts['上午'],pm=M().shifts['下午'];
+  const am=M().shifts['上午']||['08:30','12:00'],pm=M().shifts['下午']||['13:00','17:30'];
   const recs=live().filter(r=>r.date===date);
   const inRange=(r,[s,e])=>toMin(r.start)<toMin(e)&&toMin(r.end)>toMin(s);
   const item=r=>{const c=code(r.type);const what=c==='WS'?[r.modelNo||r.model,r.wo,r.station].filter(Boolean).join(' '):([r.cust,r.svc].filter(Boolean).join(' ')||r.note||r.type.split(' ').slice(1).join(' '));
@@ -621,7 +642,7 @@ function mergeDB(a,b){
   if(!b||!Array.isArray(b.records)) return a;
   const map=new Map(a.records.map(r=>[r.id,r]));
   b.records.forEach(r=>{const x=map.get(r.id);if(!x||(r.updatedAt||0)>(x.updatedAt||0))map.set(r.id,r)});
-  const master=(b.master&&b.master.staff&&(b.master.updatedAt||0)>(a.master.updatedAt||0))?b.master:a.master;
+  const master=(b.master&&b.master.staff)?mergeMaster(a.master,b.master):a.master;
   return {app:'service-report',ver:1,records:[...map.values()],master:fixMaster(master)};
 }
 
@@ -802,7 +823,7 @@ async function makeCfgLink(){
   if(!/^https:\/\//.test(host)){alert('請先填手機版網址（https:// 開頭）');return}
   if(!parseFormUrl(fu)){alert('Forms 網址格式不對：要用「取得預先填寫的 URL」產生、資料欄填 TEST 的那串網址');return}
   localStorage.setItem(HOST_KEY,host);
-  if(M().formUrl!==fu){DB.master={...M(),formUrl:fu,updatedAt:Date.now()};persist();autoSync()}
+  if(M().formUrl!==fu){setMaster({formUrl:fu});autoSync()}
   const code=await packText({app:'service-report',cfg:1,master:M()});
   const base=host.replace(/#.*$/,''); const link=base+(base.includes('?')?'&':'?')+'openExternalBrowser=1#cfg='+code;
   document.getElementById('cfgOut').value=link;
@@ -816,7 +837,7 @@ async function applyCfgText(t,fromWizard){
   if(!/^SR[01]:/.test(code)) return cfgFail('這不是設定連結。正確的連結裡會有「#cfg=SR1:」這一段。',fromWizard);
   try{
     const c=await unpackText(code); if(!c||c.app!=='service-report'||!c.master||!c.master.staff) throw new Error('內容不正確');
-    DB.master=fixMaster({...c.master}); persist();
+    DB.master=mergeMaster(M(),c.master); persist();
     const hasFile=await IDB.get('file').catch(()=>null);
     if(!hasFile&&c.master.formUrl&&parseFormUrl(c.master.formUrl)){localStorage.setItem(FORM_KEY,c.master.formUrl);if(!localStorage.getItem(SENT_KEY))localStorage.setItem(SENT_KEY,'0')}
     ['ws','fs'].forEach(k=>{FORM[k]=blankForm(k)}); renderAll(true); updUpBtn(); showFileName(); closeAdmin(); closeWizard();
@@ -954,11 +975,11 @@ async function pwOk(){const h=await hashPw(document.getElementById('pwIn').value
 function pwCancel(){pwNext=null;document.getElementById('pwDlg').classList.remove('on')}
 async function setPw(){const a=document.getElementById('pw1').value,b=document.getElementById('pw2').value;
   if(a.length<4){alert('密碼至少 4 個字');return} if(a!==b){alert('兩次輸入的密碼不一樣');return}
-  const h=await hashPw(a); DB.master={...M(),adminHash:h,updatedAt:Date.now()}; persist(); adminOK=true;
+  const h=await hashPw(a); setMaster({adminHash:h}); adminOK=true;
   localStorage.removeItem(TRUST_KEY); document.getElementById('pw1').value='';document.getElementById('pw2').value=''; showFileName(); autoSync();
   alert('已設定管理密碼。同步後所有裝置的 ⚙ 都需要密碼；手機要重新傳設定連結才會套用。')}
 function clearPw(){if(!M().adminHash) return; if(!confirm('移除管理密碼？所有裝置的 ⚙ 將不再需要密碼。'))return;
-  const m={...M(),updatedAt:Date.now()}; delete m.adminHash; DB.master=m; persist(); localStorage.removeItem(TRUST_KEY); showFileName(); autoSync()}
+  setMaster({adminHash:''}); localStorage.removeItem(TRUST_KEY); showFileName(); autoSync()}
 function autoSync(){syncNow(false)}
 setInterval(autoSync,120000);
 
@@ -972,8 +993,7 @@ function openAdminReal(){
   document.getElementById('mCust').value=m.customers.join('\n');
   document.getElementById('mModel').value=(m.models||[]).join('\n');
   document.getElementById('mSvc').value=(m.services||[]).join('\n');
-  [['tAll','全天'],['tAm','上午'],['tPm','下午']].forEach(([id,k])=>{document.getElementById(id+'S').value=m.shifts[k][0];document.getElementById(id+'E').value=m.shifts[k][1]});
-  document.getElementById('tLuS').value=m.lunch[0];document.getElementById('tLuE').value=m.lunch[1];
+  fillTRows('tShift',m.shifts); fillTRows('tBreak',m.breaks);
   document.getElementById('dataInfo').textContent=`本機共 ${live().length} 筆有效紀錄（含已刪除標記 ${DB.records.length} 筆）`;
   showFileName(); document.getElementById('adm').classList.add('on');
 }
@@ -987,10 +1007,28 @@ function saveAdmin(){
   if(!staff.length||!stations.length){alert('人員和站別不能是空的');return}
   const tc=types.map(code);
   if(!tc.includes('WS')||!tc.includes('FS')){alert('工作類型必須保留 WS 和 FS 兩個代碼');return}
-  const t={};for(const id of ['tAllS','tAllE','tAmS','tAmE','tPmS','tPmE','tLuS','tLuE']){const n=normTime(document.getElementById(id).value);if(!n){alert('時間格式錯誤，請用 08:30 這種格式');return}t[id]=n}
-  DB.master={...M(),staff,types,stations,customers,models,services,shifts:{'全天':[t.tAllS,t.tAllE],'上午':[t.tAmS,t.tAmE],'下午':[t.tPmS,t.tPmE]},lunch:[t.tLuS,t.tLuE],updatedAt:Date.now()};
-  persist(); closeAdmin(); renderAll(true); autoSync();
+  const shifts=readTRows('tShift','時段'); if(!shifts) return; if(!Object.keys(shifts).length){alert('至少要有一個時段');return}
+  const breaks=readTRows('tBreak','休息'); if(!breaks) return;
+  setMaster({staff,types,stations,customers,models,services,shifts,breaks});
+  closeAdmin(); renderAll(true); autoSync();
 }
+function trRow(n,a,b){return `<tr><td><input class="inp" style="width:110px" value="${esc(n)}"></td><td><input class="inp t" value="${esc(a)}"></td><td>–</td><td><input class="inp t" value="${esc(b)}"></td><td><button class="ib" title="刪除" onclick="this.closest('tr').remove()">✕</button></td></tr>`}
+function fillTRows(id,obj){document.getElementById(id).innerHTML='<tr><th>名稱</th><th>開始</th><th></th><th>結束</th><th></th></tr>'+Object.entries(obj||{}).map(([n,[a,b]])=>trRow(n,a,b)).join('')}
+function addTRow(id){document.getElementById(id).insertAdjacentHTML('beforeend',trRow('','',''))}
+function readTRows(id,label){const out={};
+  for(const tr of document.querySelectorAll('#'+id+' tr')){const ins=tr.querySelectorAll('input'); if(ins.length<3) continue;
+    const n=ins[0].value.trim(),a=normTime(ins[1].value),b=normTime(ins[2].value);
+    if(!n&&!ins[1].value.trim()&&!ins[2].value.trim()) continue;
+    if(!n){alert(label+'名稱不能空白');return null} if(out[n]){alert(label+'名稱重複：'+n);return null}
+    if(!a||!b){alert(`「${n}」時間格式錯誤，請用 08:30 這種格式`);return null}
+    if(toMin(b)<=toMin(a)){alert(`「${n}」結束要晚於開始`);return null}
+    out[n]=[a,b]}
+  return out}
+function fillFromRecords(){
+  const add=(id,vals)=>{const ta=document.getElementById(id),cur=ta.value.split('\n').map(x=>x.trim()).filter(Boolean),set=new Set(cur);
+    const nw=[...new Set(vals.filter(v=>v&&!set.has(v)))]; ta.value=[...cur,...nw].join('\n'); return nw.length};
+  const a=add('mStaff',live().map(r=>r.staff)), b=add('mCust',live().map(r=>r.cust)), c=add('mModel',live().map(r=>r.model));
+  alert(`已從報工紀錄帶入：人員 ${a}、客戶 ${b}、機種 ${c} 個。\n請檢查後按「💾 儲存主檔」。`)}
 function downloadJSON(){download(JSON.stringify(DB,null,1),`報工備份_${today()}.json`,'application/json')}
 function importJSON(inp){
   const f=inp.files[0]; if(!f) return;
