@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>Service 報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.3<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>Service 報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.4<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -318,6 +318,10 @@ function mergeMaster(a,b){
   if(!b||typeof b!=='object') return a; b=fixMaster(JSON.parse(JSON.stringify(b))); if(!a) return b; a=fixMaster(a);
   const r={...a,fts:{}};
   for(const k of MF){const ta=fts(a,k),tb=fts(b,k); if(tb>ta&&b[k]!==undefined){r[k]=b[k];r.fts[k]=tb}else{r.fts[k]=ta;if(a[k]===undefined&&b[k]!==undefined&&tb>=ta)r[k]=b[k]}}
+  // 保護：清單不會被「空的」蓋掉（空白主檔常是新裝置或誤操作造成）
+  for(const k of ['staff','types','stations','customers','services','models']){
+    if(Array.isArray(r[k])&&!r[k].length){const o=[a[k],b[k]].find(v=>Array.isArray(v)&&v.length); if(o) r[k]=o}}
+  if(!r.shifts||!Object.keys(r.shifts).length) r.shifts=(a.shifts&&Object.keys(a.shifts).length)?a.shifts:b.shifts;
   r.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
   return fixMaster(r)}
 fixMaster(DB.master);
@@ -671,6 +675,9 @@ async function pickShared(create){
   try{
     const opt={types:[{description:'報工共用檔',accept:{'application/json':['.json']}}]};
     const h=create?await showSaveFilePicker({...opt,suggestedName:'報工_shared.json'}):(await showOpenFilePicker(opt))[0];
+    if(!create){const t=(await (await h.getFile()).text()).trim(); let ok=!t;
+      if(t){try{ok=JSON.parse(t).app==='service-report'}catch(e){ok=false}}
+      if(!ok||/^push_/i.test(h.name)){alert(`「${h.name}」不是共用檔${/^push_/i.test(h.name)?'（這是收件匣裡的上傳檔）':''}。\n請選「&職代用」資料夾裡的「報工_shared.json」。`);return}}
     await IDB.set('file',h); if(formUrl()){localStorage.removeItem(FORM_KEY);formQueue=[];updUpBtn()} await syncNow(true);
   }catch(e){if(e.name!=='AbortError')alert('設定失敗：'+e.message)}
 }
