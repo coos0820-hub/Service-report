@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.8<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.9<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -175,7 +175,7 @@ body.station .notstation{display:none!important}
       <div><label>工作類型</label><textarea class="ta" id="mType"></textarea></div>
       <div><label>站別（廠內）</label><textarea class="ta" id="mStation"></textarea></div>
       <div><label>客戶（廠外）</label><textarea class="ta" id="mCust"></textarea></div>
-      <div><label>機種</label><textarea class="ta" id="mModel"></textarea></div>
+      <div><label id="mModelL">機種</label><textarea class="ta" id="mModel"></textarea></div>
       <div><label>服務項目（客戶現場服務 FS）</label><textarea class="ta" id="mSvc"></textarea></div>
     </div>
   </div>
@@ -201,6 +201,10 @@ body.station .notstation{display:none!important}
       共用檔放在 <b>NAS 的報工資料夾</b>（例如 \\NAS的IP\Service\報工\報工_shared.json）。第一台電腦按「建立新共用檔」，其他電腦按「選擇既有共用檔」選同一個檔。<br>
       設定後，每次存檔和每 2 分鐘會自動同步（瀏覽器重開後第一次需要按一次「🔄 同步」授權）。只支援電腦版 Chrome / Edge。</p>
     </div>
+    <div class="box notstation" style="border-color:#E65100;background:#FFF3E0"><b>🔗 共用設定（入口網站管理）：</b><span id="shSetName">未設定</span>
+      <div class="row" style="margin-top:8px"><button class="btn btn-b btn-s" onclick="pickShSet()">📂 選擇共用設定檔</button><button class="btn btn-o btn-s" onclick="syncNow(true)">🔄 立即套用</button><button class="btn btn-o btn-s" onclick="forgetShSet()">取消設定</button></div>
+      <p>選 NAS「共用設定」資料夾裡的 <b>共用設定.json</b>。設定後每次同步會讀取共用設定，把<b>機種清單</b>和 <b>WO 工單號格式</b>帶進主檔，再隨共用檔和手機設定連結傳到其他裝置。只需要一台電腦設定（建議你的電腦）。<br>
+      設定後，機種請到入口網站的「共用設定」修改；在這裡的「清單 → 機種」改的內容，下次同步會被共用設定蓋掉。</p></div>
     <div class="box notstation" style="border-color:#1565C0;background:#E3F2FD"><b>☁ SharePoint 自動備份</b>　<span id="spSt" class="hint"></span>
       <div class="row" style="margin-top:8px"><label style="font-size:13px;cursor:pointer"><input type="checkbox" id="spOn" onchange="toggleSp(this.checked)"> 啟用</label>
         <button class="btn btn-b btn-s" onclick="pickSp()">📂 選擇備份位置</button><button class="btn btn-o btn-s" onclick="forgetSp()">取消設定</button></div>
@@ -307,6 +311,7 @@ function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.mo
   if(!m.shifts||typeof m.shifts!=='object')m.shifts=JSON.parse(JSON.stringify(DEFAULT_MASTER.shifts));
   if(!m.breaks||typeof m.breaks!=='object'){m.breaks={'午休':m.lunch||['12:00','13:00'],'晚休':['17:30','18:00']};if(!m.shifts['加班'])m.shifts['加班']=['18:00','20:00']}
   m.lunch=Object.values(m.breaks)[0]||['12:00','13:00'];
+  if(!m.woFmt||typeof m.woFmt!=='object') m.woFmt={pattern:'',note:'',example:''};
   if(!Array.isArray(m.mig)) m.mig=[];
   if(!m.mig.includes('v196')){ // 一次性：補「其他」「廠內作業」（之後刪掉不會再加回）
     if(Array.isArray(m.types)&&!m.types.some(t=>String(t).split(' ')[0]==='OTH')) m.types=[...m.types,'OTH 其他'];
@@ -314,7 +319,7 @@ function fixMaster(m){if(!Array.isArray(m.models))m.models=[...DEFAULT_MASTER.mo
     m.mig=[...m.mig,'v196']}
   return m}
 // ── 主檔：逐欄位時間戳，合併時各欄位取較新者（避免空白主檔蓋掉人員清單）──
-const MF=['staff','types','stations','customers','services','models','shifts','breaks','formUrl','adminHash'];
+const MF=['staff','types','stations','customers','services','models','shifts','breaks','formUrl','adminHash','woFmt'];
 const fts=(m,k)=>!m?0:(m.fts&&typeof m.fts==='object')?(+m.fts[k]||0):(m.updatedAt||0);
 function setMaster(ch){const now=Date.now(),m={...M(),fts:{}}; for(const k of MF) m.fts[k]=fts(M(),k);
   for(const k in ch){if(JSON.stringify(m[k]??'')!==JSON.stringify(ch[k]??'')){m[k]=ch[k];m.fts[k]=now}}
@@ -367,6 +372,9 @@ function checkRec(r){
   if(r.kind==='FS'&&+r.travel>=h) return '交通時數不能大於等於總工時';
   return '';
 }
+// ── WO 格式（由入口網站「共用設定」管理）──
+function woCheck(w){const f=M().woFmt; w=String(w||'').trim(); if(!w||!f||!f.pattern) return '';
+  try{return new RegExp(f.pattern,'i').test(w)?'':'工單號格式不符'+(f.example?'，正確寫法例如 '+f.example:'')+(f.note?'（'+f.note+'）':'')}catch(e){return ''}}
 function overlapWarn(r){
   const s=toMin(r.start),e=toMin(r.end);
   const o=live().find(x=>x.id!==r.id&&x.staff===r.staff&&x.date===r.date&&toMin(x.start)<e&&toMin(x.end)>s);
@@ -429,7 +437,7 @@ function buildPage(kind){
     <div class="hint" id="${kind}-sum" style="margin-top:6px"></div></div></div>`;
   ['date','start','end','wo','cust','modelNo','note'].forEach(f=>{
     const i=document.getElementById(kind+'-'+f); if(!i) return;
-    if(f==='wo') i.addEventListener('change',()=>woFill(kind));
+    if(f==='wo'){i.addEventListener('change',()=>woFill(kind)); i.addEventListener('input',()=>{const we=woCheck(i.value.toUpperCase()); i.classList.toggle('err',!!we); i.title=we})}
     i.addEventListener('input',()=>{FORM[kind][f]=i.value; if(f==='start'||f==='end'){FORM[kind].shift='';paintChips(kind)} updCalc(kind)});
     if(f==='start'||f==='end') i.addEventListener('blur',()=>{const n=normTime(i.value);
       if(n===null){i.classList.add('err');return} i.classList.remove('err'); i.value=n; FORM[kind][f]=n; matchShift(kind); updCalc(kind)});
@@ -509,6 +517,7 @@ function saveForm(kind){
     station:kind==='ws'?F.station:'',cust:kind==='fs'?F.cust:'',svc:code(F.type)==='FS'?F.svc:''};
   const err=checkRec(rec);
   if(err){msg.className='msg bad';msg.textContent='⚠ '+err;return}
+  const we=woCheck(rec.wo); if(we&&!confirm('⚠ '+we+'\n\n確定這個工單號沒打錯、仍要儲存嗎？')){msg.className='msg bad';msg.textContent='⚠ '+we;return}
   const warn=overlapWarn(rec);
   const now=Date.now();
   if(rec.id){const i=DB.records.findIndex(x=>x.id===rec.id); DB.records[i]={...DB.records[i],...rec,updatedAt:now}}
@@ -702,6 +711,10 @@ async function showFileName(){const h=await IDB.get('file').catch(()=>null);cons
   const mn=document.getElementById('meName');if(mn)mn.textContent=myName()||'未設定（共用）';
   const sh=await IDB.get('spbak').catch(()=>null);const so=document.getElementById('spOn');if(so)so.checked=spOn()&&!!sh;
   const ss=document.getElementById('spSt');if(ss)ss.textContent=sh?`${sh.name}${spOn()?' · 已啟用':' · 已停用'}${localStorage.getItem('svc_report_sp_time')?' · 上次 '+localStorage.getItem('svc_report_sp_time'):''}`:'（未設定）';
+  const shh=await IDB.get('shset').catch(()=>null);const sse=document.getElementById('shSetName');
+  if(sse){let inf={};try{inf=JSON.parse(localStorage.getItem(SHSET_KEY))||{}}catch(e){}
+    const wf=M().woFmt||{};sse.textContent=shh?`${shh.name}${inf.read?' · 上次讀取 '+new Date(inf.read).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):''} · 機種 ${M().models.length} 個 · WO 格式 ${wf.pattern?'已設定':'未設定'}`:'未設定'}
+  const ml=document.getElementById('mModelL');if(ml)ml.textContent=shh?'機種（由共用設定管理，這裡修改會被覆蓋）':'機種';
   const pw=document.getElementById('pwSt');if(pw)pw.textContent=M().adminHash?'✔ 已設定':'（未設定，任何人都能改清單）';
   applyRole()}
 async function syncNow(interactive){
@@ -722,6 +735,7 @@ async function syncNow(interactive){
     DB=mergeDB(DB,remote);
     const inbox=await readInbox(interactive);
     inbox.items.forEach(it=>{DB=mergeDB(DB,{records:it.data.records||[],master:it.data.master||{updatedAt:0}})});
+    const shMsg=await applyShSet(interactive);
     const out=JSON.stringify(DB);
     const w=await h.createWritable(); await w.write(out); await w.close();
     for(const it of inbox.items){try{await inbox.dir.removeEntry(it.name)}catch(e){}}
@@ -729,9 +743,38 @@ async function syncNow(interactive){
     let drift=0; try{const f2=await h.getFile(); drift=Math.round((Date.now()-f2.lastModified)/60000)}catch(e){}
     const sp=await spBackup(out,interactive);
     const warn=Math.abs(drift)>=5?` ⚠ 這台電腦時間和共用檔差 ${Math.abs(drift)} 分鐘，請 IT 校時`:'';
-    setSt(`${inbox.items.length?'收件匣 '+inbox.items.length+' 批已併入 · ':''}✔ 已同步 ${new Date().toLocaleTimeString('zh-TW',{hour12:false,hour:'2-digit',minute:'2-digit'})}（${h.name}，${live().length} 筆${sp}）${warn}`,warn?'#FFAB91':'#A5D6A7');
+    setSt(`${inbox.items.length?'收件匣 '+inbox.items.length+' 批已併入 · ':''}✔ 已同步 ${new Date().toLocaleTimeString('zh-TW',{hour12:false,hour:'2-digit',minute:'2-digit'})}（${h.name}，${live().length} 筆${sp}${shMsg}）${warn}`,warn?'#FFAB91':'#A5D6A7');
   }catch(e){setSt('同步失敗：'+e.message,'#FFAB91'); if(interactive) alert('同步失敗：'+e.message)}
   finally{syncing=false; showFileName()}
+}
+// ── 共用設定（NAS「共用設定」資料夾，由入口網站維護）──
+const SHSET_KEY='svc_report_shset_info';
+async function pickShSet(){
+  if(!fsSupported()){alert('請用電腦版 Chrome 或 Edge');return}
+  try{const [h]=await showOpenFilePicker({types:[{description:'共用設定',accept:{'application/json':['.json']}}]});
+    let j=null;try{j=JSON.parse((await (await h.getFile()).text()).replace(/^\uFEFF/,''))}catch(e){}
+    if(!j||j.app!=='shared-settings'){alert(`「${h.name}」不是共用設定檔。\n請選 NAS「共用設定」資料夾裡的「共用設定.json」（由入口網站建立）。`);return}
+    await IDB.set('shset',h); await applyShSet(true,true); await syncNow(true); showFileName();
+  }catch(e){if(e.name!=='AbortError')alert('設定失敗：'+e.message)}
+}
+async function forgetShSet(){await IDB.del('shset');localStorage.removeItem(SHSET_KEY);showFileName()}
+// 讀共用設定 → 機種清單、WO 格式寫入主檔（主檔會再同步到共用檔和手機設定連結）
+async function applyShSet(interactive,force){
+  const h=await IDB.get('shset').catch(()=>null); if(!h) return '';
+  try{let p=await h.queryPermission({mode:'read'});
+    if(p!=='granted'){if(!interactive) return ' · 共用設定待授權'; p=await h.requestPermission({mode:'read'}); if(p!=='granted') return ' · 共用設定未授權'}
+    const j=JSON.parse((await (await h.getFile()).text()).replace(/^\uFEFF/,''));
+    if(!j||j.app!=='shared-settings') return ' · 共用設定檔內容不正確';
+    const ch={};
+    const fam=Array.isArray(j.families)?[...new Set(j.families.map(x=>String(x).trim()).filter(Boolean))]:[];
+    if(fam.length&&JSON.stringify(fam)!==JSON.stringify(M().models)) ch.models=fam;
+    const w=(j.formats&&j.formats.wo)||{}; const wf={pattern:String(w.pattern||''),note:String(w.note||''),example:String(w.example||'')};
+    if(JSON.stringify(wf)!==JSON.stringify(M().woFmt)) ch.woFmt=wf;
+    if(Object.keys(ch).length) setMaster(ch);
+    localStorage.setItem(SHSET_KEY,JSON.stringify({name:h.name,at:j.updatedAt||'',read:Date.now()}));
+    if(Object.keys(ch).length){FORM.ws&&paintChips('ws');FORM.fs&&paintChips('fs')}
+    return Object.keys(ch).length?' · 已套用共用設定':'';
+  }catch(e){return ' · 共用設定讀取失敗'}
 }
 // ── 報工電腦：HTTP 流程同步 ──
 const FLOW_KEY='svc_report_flow_url', PUSH_KEY='svc_report_last_push';
