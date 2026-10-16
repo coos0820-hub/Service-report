@@ -122,7 +122,7 @@ body.station .notstation{display:none!important}
 </head>
 <body>
 <div class="ph">
-  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.9<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
+  <div><h1>報工系統<span class="h1en">Service Time Reporting</span></h1><div class="sub">台灣普熙 技術服務部 · 廠內 Workshop ／ 廠外 Field Service · V1.9.10<span class="role-tag" id="roleTag" style="display:none">報工電腦</span></div></div>
   <div class="right"><span class="sync-st" id="syncSt">尚未設定共用檔</span><button class="sync-btn" id="upBtn" style="display:none;background:#6A1B9A" onclick="uploadClick()">📤 上傳</button><button class="sync-btn" id="syncBtn" onclick="syncNow(true)">🔄 同步</button><button class="sync-btn" style="background:rgba(255,255,255,.15)" title="使用說明" onclick="showWizard('help')">❓</button></div>
 </div>
 <div class="tabs">
@@ -212,7 +212,7 @@ body.station .notstation{display:none!important}
       用途：NAS 故障時的另一份備份、沒有 NAS 的人可用「合併匯入 JSON」查看、日後接 Excel／Power BI。只需要在你的電腦設定。</p></div>
     <div class="box notstation" style="border-color:#2E7D32;background:#F1F8E9"><b>📱 手機／新裝置設定連結</b>（由有主檔的電腦產生）
       <div class="mgrid" style="margin-top:8px">
-        <div><label>手機版網址（GitHub Pages）</label><input class="inp" id="hostUrl" style="width:100%" placeholder="https://帳號.github.io/service-report/"></div>
+        <div><label>手機版網址（GitHub Pages）</label><input class="inp" id="hostUrl" style="width:100%" placeholder="https://coos0820-hub.github.io/Service-time-reporting/"></div>
         <div><label>Forms 預先填入網址（資料欄填 TEST）</label><input class="inp" id="cfgFormUrl" style="width:100%" placeholder="https://forms.cloud.microsoft/...&r…=TEST"></div>
       </div>
       <div class="row" style="margin-top:8px"><button class="btn btn-p btn-s" onclick="makeCfgLink()">產生設定連結</button><button class="btn btn-o btn-s" onclick="copyCfg()">複製</button><button class="btn btn-o btn-s" onclick="showQR()">▦ QR Code</button>
@@ -706,7 +706,7 @@ async function showFileName(){const h=await IDB.get('file').catch(()=>null);cons
   const d=await IDB.get('inbox').catch(()=>null);const e2=document.getElementById('inboxName');if(e2)e2.textContent=d?d.name:'未設定';
   const fm=document.getElementById('formUrl');if(fm&&document.activeElement!==fm)fm.value=formUrl()||M().formUrl||'';
   const fs=document.getElementById('formSt');if(fs)fs.textContent=formUrl()?'✔ 這台已啟用':'（未啟用）';
-  const hu=document.getElementById('hostUrl');if(hu&&document.activeElement!==hu)hu.value=localStorage.getItem(HOST_KEY)||'';
+  const hu=document.getElementById('hostUrl');if(hu&&document.activeElement!==hu)hu.value=localStorage.getItem(HOST_KEY)||(/github\.io$/i.test(location.hostname)?location.origin+location.pathname:'');
   const cf=document.getElementById('cfgFormUrl');if(cf&&document.activeElement!==cf)cf.value=M().formUrl||formUrl()||'';
   const mn=document.getElementById('meName');if(mn)mn.textContent=myName()||'未設定（共用）';
   const sh=await IDB.get('spbak').catch(()=>null);const so=document.getElementById('spOn');if(so)so.checked=spOn()&&!!sh;
